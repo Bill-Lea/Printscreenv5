@@ -1,0 +1,42 @@
+# Build directories
+build/
+out/
+.vs/
+
+# vcpkg
+vcpkg_installed/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Compiled files
+*.dll
+*.pdb
+*.lib
+*.exp
+*.ilk
+*.obj
+*.pch
+*.log
+*.tlog
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
