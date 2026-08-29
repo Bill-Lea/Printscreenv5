@@ -239,7 +239,6 @@ Event OnConfigClose()
     MainQuest.UpdateHotkey(MainQuest.Key_TakePhoto)
     if (MainQuest.UseJsonFile)
         MainQuest.WriteJson()
-        JsonUtil.Save(MainQuest.jsonFilename)
     endif
 EndEvent
 

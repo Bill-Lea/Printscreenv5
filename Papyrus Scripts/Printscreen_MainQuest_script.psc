@@ -71,17 +71,6 @@ bool  _CompletionHandled = false
 ; ==============================================================================
 ; INITIALIZATION
 ; ==============================================================================
-int Function CheckPapyrusUtil() global
-    int dllVer = PapyrusUtil.GetVersion()
-    if dllVer <= 0
-        return 0           ; SKSE plugin not loaded
-    endif
-    if PapyrusUtil.GetScriptVersion() != dllVer
-        return -1          ; mismatched install
-    endif
-    return 1
-endFunction
-
 Function InitializePrintscreen()
     ; TARGETED unregistration only -- do NOT use UnregisterForAllKeys() /
     ; UnregisterForAllModEvents() here. Printscreen_MCM_script (SKI_ConfigBase)
@@ -136,10 +125,6 @@ Event OnInit()
         Debug.MessageBox("ERROR: SKSE not detected.")
         allOK = false
     endif
-    if (!CheckPapyrusUtil())
-        Debug.MessageBox("ERROR: PapyrusUtil not detected.")
-        allOK = false
-    endif
     if (allOK)
     ; So here we need to check that the json file exists is valid Json and is
     ;a complete file. If not write out default values else read jason and validate it.
@@ -162,37 +147,37 @@ EndEvent
 
 Function WriteJson()
     ; Image
-    JsonUtil.SetStringValue(jsonFilename, "Path", Path)
-    JsonUtil.SetStringValue(jsonFilename, "ImageType", ImageType)
-    JsonUtil.SetFloatValue(jsonFilename, "JPG_Compression", JPG_Compression)
-    JsonUtil.SetStringValue(jsonFilename, "Mode", Mode)
-    JsonUtil.SetFloatValue(jsonFilename, "Duration", Duration)
-    JsonUtil.SetFloatValue(jsonFilename, "Fps", Fps)
-    JsonUtil.SetIntValue(jsonFilename, "LoopCount", LoopCount)
-    JsonUtil.SetIntValue(jsonFilename, "Compression", Compression)
-    JsonUtil.SetIntValue(jsonFilename, "DeltaMode", DeltaMode)
-    JsonUtil.SetIntValue(jsonFilename, "Optimize", Optimize)
-    JsonUtil.SetFloatValue(jsonFilename, "Quality", Quality)
-    JsonUtil.SetStringValue(jsonFilename, "Tif_Mode", Tif_Mode)
-    JsonUtil.SetStringValue(jsonFilename, "DDS_Mode", DDS_Mode)
+    Printscreen_JSON_script.SetStringValue(jsonFilename, "Path", Path)
+    Printscreen_JSON_script.SetStringValue(jsonFilename, "ImageType", ImageType)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "JPG_Compression", JPG_Compression)
+    Printscreen_JSON_script.SetStringValue(jsonFilename, "Mode", Mode)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "Duration", Duration)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "Fps", Fps)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "LoopCount", LoopCount)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "Compression", Compression)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "DeltaMode", DeltaMode)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "Optimize", Optimize)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "Quality", Quality)
+    Printscreen_JSON_script.SetStringValue(jsonFilename, "Tif_Mode", Tif_Mode)
+    Printscreen_JSON_script.SetStringValue(jsonFilename, "DDS_Mode", DDS_Mode)
 
     ; Video
-    JsonUtil.SetFloatValue(jsonFilename, "VideoDuration", VideoDuration)
-    JsonUtil.SetIntValue(jsonFilename, "TargetResolution", TargetResolution)
-    JsonUtil.SetIntValue(jsonFilename, "VideoFrameRate", VideoFrameRate)
-    JsonUtil.SetIntValue(jsonFilename, "QualityPreset", QualityPreset)
-    JsonUtil.SetIntValue(jsonFilename, "VideoBitrate", VideoBitrate)
-    JsonUtil.SetFloatValue(jsonFilename, "KeyframeInterval", KeyframeInterval)
-    JsonUtil.SetIntValue(jsonFilename, "EncoderPreference", EncoderPreference)
-    JsonUtil.SetIntValue(jsonFilename, "RateControl", RateControl)
-    JsonUtil.SetIntValue(jsonFilename, "VideoContainer", VideoContainer)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "VideoDuration", VideoDuration)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "TargetResolution", TargetResolution)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "VideoFrameRate", VideoFrameRate)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "QualityPreset", QualityPreset)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "VideoBitrate", VideoBitrate)
+    Printscreen_JSON_script.SetFloatValue(jsonFilename, "KeyframeInterval", KeyframeInterval)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "EncoderPreference", EncoderPreference)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "RateControl", RateControl)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "VideoContainer", VideoContainer)
 
     ; UI
-    JsonUtil.SetIntValue(jsonFilename, "Menu", Menu as int)
-    JsonUtil.SetIntValue(jsonFilename, "AutoUI", AutoUI as int)
-    JsonUtil.SetIntValue(jsonFilename, "Key_TakePhoto", Key_TakePhoto)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "Menu", Menu as int)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "AutoUI", AutoUI as int)
+    Printscreen_JSON_script.SetIntValue(jsonFilename, "Key_TakePhoto", Key_TakePhoto)
 
-    JsonUtil.Save(jsonFilename)
+    Printscreen_JSON_script.Save(jsonFilename)
     Debug.Notification("PrintScreen: Config saved to JSON") 
 EndFunction
 
@@ -200,43 +185,43 @@ EndFunction
 
 Function ReadJson()
   ; Image
-    Path = JsonUtil.GetStringValue(jsonFilename,"Path")
-    ImageType= JsonUtil.GetStringValue(jsonFilename, "ImageType")
-    JPG_Compression = JsonUtil.GetFloatValue(jsonFilename, "JPG_Compression")
-    Mode = JsonUtil.GetStringValue(jsonFilename, "Mode")
-    Duration = JsonUtil.GetFloatValue(jsonFilename, "Duration")
-    FPS = JsonUtil.GetFloatValue(jsonFilename, "Fps")
-    LoopCount = JsonUtil.GetIntValue(jsonFilename, "LoopCount")
-    Compression = JsonUtil.GetIntValue(jsonFilename, "Compression")
-    DeltaMode = JsonUtil.GetIntValue(jsonFilename, "DeltaMode")
-    Optimize = JsonUtil.GetIntValue(jsonFilename, "Optimize") 
-    Quality = JsonUtil.GetFloatValue(jsonFilename, "Quality")
-    TIF_Mode =JsonUtil.GetStringValue(jsonFilename, "Tif_Mode")
-    DDS_Mode = JsonUtil.GetStringValue(jsonFilename, "DDS_Mode")
+    Path = Printscreen_JSON_script.GetStringValue(jsonFilename,"Path")
+    ImageType= Printscreen_JSON_script.GetStringValue(jsonFilename, "ImageType")
+    JPG_Compression = Printscreen_JSON_script.GetFloatValue(jsonFilename, "JPG_Compression")
+    Mode = Printscreen_JSON_script.GetStringValue(jsonFilename, "Mode")
+    Duration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Duration")
+    FPS = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Fps")
+    LoopCount = Printscreen_JSON_script.GetIntValue(jsonFilename, "LoopCount")
+    Compression = Printscreen_JSON_script.GetIntValue(jsonFilename, "Compression")
+    DeltaMode = Printscreen_JSON_script.GetIntValue(jsonFilename, "DeltaMode")
+    Optimize = Printscreen_JSON_script.GetIntValue(jsonFilename, "Optimize") 
+    Quality = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Quality")
+    TIF_Mode =Printscreen_JSON_script.GetStringValue(jsonFilename, "Tif_Mode")
+    DDS_Mode = Printscreen_JSON_script.GetStringValue(jsonFilename, "DDS_Mode")
 
     ; Video
-    VideoDuration = JsonUtil.GetFloatValue(jsonFilename, "VideoDuration" )
-    TargetResolution = JsonUtil.GetIntValue(jsonFilename, "TargetResolution")
-    VideoFrameRate = JsonUtil.GetIntValue(jsonFilename, "VideoFrameRate")
-    QualityPreset = JsonUtil.GetIntValue(jsonFilename, "QualityPreset")
-    VideoBitrate = JsonUtil.GetIntValue(jsonFilename, "VideoBitrate")
-    KeyframeInterval = JsonUtil.GetFloatValue(jsonFilename, "KeyframeInterval")
-    EncoderPreference = JsonUtil.GetIntValue(jsonFilename, "EncoderPreference")
-     RateControl = JsonUtil.GetIntValue(jsonFilename, "RateControl")
-    VideoContainer = JsonUtil.GetIntValue(jsonFilename, "VideoContainer")
+    VideoDuration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "VideoDuration" )
+    TargetResolution = Printscreen_JSON_script.GetIntValue(jsonFilename, "TargetResolution")
+    VideoFrameRate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoFrameRate")
+    QualityPreset = Printscreen_JSON_script.GetIntValue(jsonFilename, "QualityPreset")
+    VideoBitrate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoBitrate")
+    KeyframeInterval = Printscreen_JSON_script.GetFloatValue(jsonFilename, "KeyframeInterval")
+    EncoderPreference = Printscreen_JSON_script.GetIntValue(jsonFilename, "EncoderPreference")
+     RateControl = Printscreen_JSON_script.GetIntValue(jsonFilename, "RateControl")
+    VideoContainer = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoContainer")
 
     ; UI
-    Menu = JsonUtil.GetIntValue(jsonFilename, "Menu") as BOOL
-    AutoUI = JsonUtil.GetIntValue(jsonFilename, "AutoUI") as bool
-    Key_TakePhoto = JsonUtil.GetIntValue(jsonFilename, "Key_TakePhoto")
+    Menu = Printscreen_JSON_script.GetIntValue(jsonFilename, "Menu") as BOOL
+    AutoUI = Printscreen_JSON_script.GetIntValue(jsonFilename, "AutoUI") as bool
+    Key_TakePhoto = Printscreen_JSON_script.GetIntValue(jsonFilename, "Key_TakePhoto")
 
     Debug.Notification("PrintScreen: Config loaded from JSON ") 
 EndFunction
 
  bool Function CheckJson()
 
-if(jsonUtil.JsonExists(jsonfilename))
-    if(Jsonutil.isGood(JsonFileName))
+if(Printscreen_JSON_script.JsonExists(jsonfilename))
+    if(Printscreen_JSON_script.isGood(JsonFileName))
         Debug.Notification("PrintScreen: JSON file exists and is valid")
         return true
     else
@@ -259,14 +244,20 @@ EndFunction
 ; ImageType="AGIF") with script defaults ("PNG") instead of reading it.
 ; Also added the previously-unchecked "Path" key.
 bool function jsonComplete()
-if(!jsonUtil.HasStringValue(jsonfilename,"Path" ) ||  !jsonUtil.HasStringValue(jsonfilename,"ImageType" ) ||  !jsonUtil.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !jsonUtil.HasStringValue(jsonfilename,"Mode" ) ||  !jsonUtil.HasFloatValue(jsonfilename,"Duration" ) ||  !jsonUtil.HasFloatValue(jsonfilename,"Fps" ) ||  !jsonUtil.HasIntValue(jsonfilename,"LoopCount" ) ||  !jsonUtil.HasIntValue(jsonfilename,"Compression" ) ||  !jsonUtil.HasIntValue(jsonfilename,"DeltaMode" ) ||  !jsonUtil.HasINtValue(jsonfilename,"Optimize" ) ||  !jsonUtil.HasFloatValue(jsonfilename, "Quality" ) ||  !jsonUtil.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !jsonUtil.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !jsonUtil.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !jsonUtil.HasIntValue(jsonfilename,"TargetResolution" ) ||  !jsonUtil.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !jsonUtil.HasIntValue(jsonfilename,"QualityPreset" ) ||  !jsonUtil.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !jsonUtil.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !jsonUtil.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !jsonUtil.HasIntValue(jsonfilename, "RateControl") ||  !jsonUtil.HasIntValue(jsonfilename,"VideoContainer" ) ||  !jsonUtil.HasIntValue(jsonfilename,"Menu" ) ||  !jsonUtil.HasIntValue(jsonfilename,"AutoUI" ) ||  !jsonUtil.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
+if(!Printscreen_JSON_script.HasStringValue(jsonfilename,"Path" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"ImageType" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Duration" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Fps" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"LoopCount" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Compression" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"DeltaMode" ) ||  !Printscreen_JSON_script.HasINtValue(jsonfilename,"Optimize" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename, "Quality" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"TargetResolution" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"QualityPreset" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename, "RateControl") ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoContainer" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Menu" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"AutoUI" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
 return false
 else
 return true
-Endif
+endif
 EndFunction
 
 ;validate functions
+function validate_path()
+    if(!Printscreen_Formula_script.CheckPath(Path))
+        Debug.Notification("Invalid screenshot path. Path set to C:/Pictures")
+        Path = "C:/Pictures"
+    endif 
+endfunction 
 Function Validate_ImageType()
     If(Imagetype == "png" || Imagetype == "PNG")
         ImageType = "PNG"
@@ -502,6 +493,7 @@ Function RecalculateFPS()
 EndFunction
 
 function ValidateAll()
+validate_path()
 Validate_ImageType()
 Validate_JPG_Compression()
 Validate_Mode()

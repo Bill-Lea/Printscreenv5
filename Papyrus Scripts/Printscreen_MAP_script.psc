@@ -1,126 +1,233 @@
-Scriptname Printscreen_MAP_script extends Quest  
- Printscreen_MainQuest_script Property MainQuest auto
+Scriptname Printscreen_MAP_script extends Quest
 
-string Function GetKeyName(int KeyCode)
-    Int MapID = 0
-    MapID = JIntMap.object()
-    JintMap.SetStr(	MapID,	1	, "Escape")
-    JintMap.SetStr(	MapID,	2	,"1")
-    JintMap.SetStr(	MapID,	3	,"2")
-    JintMap.SetStr(	MapID,	4	,"3")
-    JintMap.SetStr(	MapID,	5	,"4")
-    JintMap.SetStr(	MapID,	6	,"5")
-    JintMap.SetStr(	MapID,	7	,"6")
-    JintMap.SetStr(	MapID,	8	,"7")
-    JintMap.SetStr(	MapID,	9	,"8")
-    JintMap.SetStr(	MapID,	10	,"9")
-    JintMap.SetStr(	MapID,	11	,"0")
-    JintMap.SetStr(	MapID,	12	,"Minus")
-    JintMap.SetStr(	MapID,	13	,"Equals")
-    JintMap.SetStr(	MapID,	14	,"Backspace")
-    JintMap.SetStr(	MapID,	15	,"Tab")
-    JintMap.SetStr(	MapID,	16	,"Q")
-    JintMap.SetStr(	MapID,	17	,"W")
-    JintMap.SetStr(	MapID,	18	,"E")
-    JintMap.SetStr(	MapID,	19	,"R")
-    JintMap.SetStr(	MapID,	20	,"T")
-    JintMap.SetStr(	MapID,	21	,"Y")
-    JintMap.SetStr(	MapID,	22	,"U")
-    JintMap.SetStr(	MapID,	23	,"I")
-    JintMap.SetStr(	MapID,	24	,"O")
-    JintMap.SetStr(	MapID,	25	,"P")
-    JintMap.SetStr(	MapID,	26	,"Left Bracket")
-    JintMap.SetStr(	MapID,	27	,"Right Bracket")
-    JintMap.SetStr(	MapID,	28	,"Enter")
-    JintMap.SetStr(	MapID,	29	,"Left Control")
-    JintMap.SetStr(	MapID,	30	,"A")
-    JintMap.SetStr(	MapID,	31	,"S")
-    JintMap.SetStr(	MapID,	32	,"D")
-    JintMap.SetStr(	MapID,	33	,"F")
-    JintMap.SetStr(	MapID,	34	,"G")
-    JintMap.SetStr(	MapID,	35	,"H")
-    JintMap.SetStr(	MapID,	36	,"J")
-    JintMap.SetStr(	MapID,	37	,"K")
-    JintMap.SetStr(	MapID,	38	,"L")
-    JintMap.SetStr(	MapID,	39	,"Semicolon")
-    JintMap.SetStr(	MapID,	40	,"Apostrophe")
-    JintMap.SetStr(	MapID,	41	,"~ (Console)")
-    JintMap.SetStr(	MapID,	42	,"Left Shift")
-    JintMap.SetStr(	MapID,	43	,"Back Slash")
-    JintMap.SetStr(	MapID,	44	,"Z")
-    JintMap.SetStr(	MapID,	45	,"X")
-    JintMap.SetStr(	MapID,	46	,"C")
-    JintMap.SetStr(	MapID,	47	,"V")
-    JintMap.SetStr(	MapID,	48	,"B")
-    JintMap.SetStr(	MapID,	49	,"N")
-    JintMap.SetStr(	MapID,	50	,"M")
-    JintMap.SetStr(	MapID,	51	,"Comma")
-    JintMap.SetStr(	MapID,	52	,"Period")
-    JintMap.SetStr(	MapID,	53	,"Forward Slash")
-    JintMap.SetStr(	MapID,	54	,"Right Shift")
-    JintMap.SetStr(	MapID,	55	,"NUM*")
-    JintMap.SetStr(	MapID,	56	,"Left Alt")
-    JintMap.SetStr(	MapID,	57	,"Spacebar")
-    JintMap.SetStr(	MapID,	58	,"Caps Lock")
-    JintMap.SetStr(	MapID,	59	,"F1")
-    JintMap.SetStr(	MapID,	60	,"F2")
-    JintMap.SetStr(	MapID,	61	,"F3")
-    JintMap.SetStr(	MapID,	62	,"F4")
-    JintMap.SetStr(	MapID,	63	,"F5")
-    JintMap.SetStr(	MapID,	64	,"F6")
-    JintMap.SetStr(	MapID,	65	,"F7")
-    JintMap.SetStr(	MapID,	66	,"F8")
-    JintMap.SetStr(	MapID,	67	,"F9")
-    JintMap.SetStr(	MapID,	68	,"F10")
-    JintMap.SetStr(	MapID,	69	,"Num Lock")
-    JintMap.SetStr(	MapID,	70	,"Scroll Lock")
-    JintMap.SetStr(	MapID,	71	,"NUM7")
-    JintMap.SetStr(	MapID,	72	,"NUM8")
-    JintMap.SetStr(	MapID,	73	,"NUM9")
-    JintMap.SetStr(	MapID,	74	,"NUM-")
-    JintMap.SetStr(	MapID,	75	,"NUM4")
-    JintMap.SetStr(	MapID,	76	,"NUM5")
-    JintMap.SetStr(	MapID,	77	,"NUM6")
-    JintMap.SetStr(	MapID,	78	,"NUM+")
-    JintMap.SetStr(	MapID,	79	,"NUM1")
-    JintMap.SetStr(	MapID,	80	,"NUM2")
-    JintMap.SetStr(	MapID,	81	,"NUM3")
-    JintMap.SetStr(	MapID,	82	,"NUM0")
-    JintMap.SetStr(	MapID,	83	,"NUM.")
-    JintMap.SetStr(	MapID,	87	,"F11")
-    JintMap.SetStr(	MapID,	88	,"F12")
-    JintMap.SetStr(	MapID,	156	,"NUM Enter")
-    JintMap.SetStr(	MapID,	157	,"Right Control")
-    JintMap.SetStr(	MapID,	181	,"NUM/")
-    JintMap.SetStr(	MapID,	183	,"0")
-    JintMap.SetStr(	MapID,	184	,"Right Alt")
-    JintMap.SetStr(	MapID,	197	,"Pause")
-    JintMap.SetStr(	MapID,	199	,"Home")
-    JintMap.SetStr(	MapID,	200	,"Up Arrow")
-    JintMap.SetStr(	MapID,	201	,"PgUp")
-    JintMap.SetStr(	MapID,	203	,"Left Arrow")
-    JintMap.SetStr(	MapID,	205	,"Right Arrow")
-    JintMap.SetStr(	MapID,	207	,"End")
-    JintMap.SetStr(	MapID,	208	,"Down Arrow")
-    JintMap.SetStr(	MapID,	209	,"PgDown")
-    JintMap.SetStr(	MapID,	210	,"Insert")
-    JintMap.SetStr(	MapID,	211	,"Delete")
-    JintMap.SetStr(	MapID,	256	,"Left Mouse Button")
-    JintMap.SetStr(	MapID,	257	,"Right Mouse Button")
-    JintMap.SetStr(	MapID,	258	,"Middle/Wheel Mouse Button")
-    JintMap.SetStr(	MapID,	259	,"Mouse Button 3")
-    JintMap.SetStr(	MapID,	260	,"Mouse Button 4")
-    JintMap.SetStr(	MapID,	261	,"Mouse Button 5")
-    JintMap.SetStr(	MapID,	262	,"Mouse Button 6")
-    JintMap.SetStr(	MapID,	263	,"Mouse Button 7")
-    JintMap.SetStr(	MapID,	264	,"Mouse Wheel Up")
-    JintMap.SetStr(	MapID,	265	,"Mouse Wheel Down")
-    string Keyname = JIntMap.GetStr(MapId, KeyCode,"default" )
-Return KeyName     
+Printscreen_MainQuest_script Property MainQuest Auto
 
+; Pure-Papyrus replacement for the former JContainers JIntMap lookup.
+; Preserves the existing GetKeyName(Int KeyCode) interface.
+String Function GetKeyName(Int KeyCode)
+    If KeyCode == 1
+        Return "Escape"
+    ElseIf KeyCode == 2
+        Return "1"
+    ElseIf KeyCode == 3
+        Return "2"
+    ElseIf KeyCode == 4
+        Return "3"
+    ElseIf KeyCode == 5
+        Return "4"
+    ElseIf KeyCode == 6
+        Return "5"
+    ElseIf KeyCode == 7
+        Return "6"
+    ElseIf KeyCode == 8
+        Return "7"
+    ElseIf KeyCode == 9
+        Return "8"
+    ElseIf KeyCode == 10
+        Return "9"
+    ElseIf KeyCode == 11
+        Return "0"
+    ElseIf KeyCode == 12
+        Return "Minus"
+    ElseIf KeyCode == 13
+        Return "Equals"
+    ElseIf KeyCode == 14
+        Return "Backspace"
+    ElseIf KeyCode == 15
+        Return "Tab"
+    ElseIf KeyCode == 16
+        Return "Q"
+    ElseIf KeyCode == 17
+        Return "W"
+    ElseIf KeyCode == 18
+        Return "E"
+    ElseIf KeyCode == 19
+        Return "R"
+    ElseIf KeyCode == 20
+        Return "T"
+    ElseIf KeyCode == 21
+        Return "Y"
+    ElseIf KeyCode == 22
+        Return "U"
+    ElseIf KeyCode == 23
+        Return "I"
+    ElseIf KeyCode == 24
+        Return "O"
+    ElseIf KeyCode == 25
+        Return "P"
+    ElseIf KeyCode == 26
+        Return "Left Bracket"
+    ElseIf KeyCode == 27
+        Return "Right Bracket"
+    ElseIf KeyCode == 28
+        Return "Enter"
+    ElseIf KeyCode == 29
+        Return "Left Control"
+    ElseIf KeyCode == 30
+        Return "A"
+    ElseIf KeyCode == 31
+        Return "S"
+    ElseIf KeyCode == 32
+        Return "D"
+    ElseIf KeyCode == 33
+        Return "F"
+    ElseIf KeyCode == 34
+        Return "G"
+    ElseIf KeyCode == 35
+        Return "H"
+    ElseIf KeyCode == 36
+        Return "J"
+    ElseIf KeyCode == 37
+        Return "K"
+    ElseIf KeyCode == 38
+        Return "L"
+    ElseIf KeyCode == 39
+        Return "Semicolon"
+    ElseIf KeyCode == 40
+        Return "Apostrophe"
+    ElseIf KeyCode == 41
+        Return "~ (Console)"
+    ElseIf KeyCode == 42
+        Return "Left Shift"
+    ElseIf KeyCode == 43
+        Return "Back Slash"
+    ElseIf KeyCode == 44
+        Return "Z"
+    ElseIf KeyCode == 45
+        Return "X"
+    ElseIf KeyCode == 46
+        Return "C"
+    ElseIf KeyCode == 47
+        Return "V"
+    ElseIf KeyCode == 48
+        Return "B"
+    ElseIf KeyCode == 49
+        Return "N"
+    ElseIf KeyCode == 50
+        Return "M"
+    ElseIf KeyCode == 51
+        Return "Comma"
+    ElseIf KeyCode == 52
+        Return "Period"
+    ElseIf KeyCode == 53
+        Return "Forward Slash"
+    ElseIf KeyCode == 54
+        Return "Right Shift"
+    ElseIf KeyCode == 55
+        Return "NUM*"
+    ElseIf KeyCode == 56
+        Return "Left Alt"
+    ElseIf KeyCode == 57
+        Return "Spacebar"
+    ElseIf KeyCode == 58
+        Return "Caps Lock"
+    ElseIf KeyCode == 59
+        Return "F1"
+    ElseIf KeyCode == 60
+        Return "F2"
+    ElseIf KeyCode == 61
+        Return "F3"
+    ElseIf KeyCode == 62
+        Return "F4"
+    ElseIf KeyCode == 63
+        Return "F5"
+    ElseIf KeyCode == 64
+        Return "F6"
+    ElseIf KeyCode == 65
+        Return "F7"
+    ElseIf KeyCode == 66
+        Return "F8"
+    ElseIf KeyCode == 67
+        Return "F9"
+    ElseIf KeyCode == 68
+        Return "F10"
+    ElseIf KeyCode == 69
+        Return "Num Lock"
+    ElseIf KeyCode == 70
+        Return "Scroll Lock"
+    ElseIf KeyCode == 71
+        Return "NUM7"
+    ElseIf KeyCode == 72
+        Return "NUM8"
+    ElseIf KeyCode == 73
+        Return "NUM9"
+    ElseIf KeyCode == 74
+        Return "NUM-"
+    ElseIf KeyCode == 75
+        Return "NUM4"
+    ElseIf KeyCode == 76
+        Return "NUM5"
+    ElseIf KeyCode == 77
+        Return "NUM6"
+    ElseIf KeyCode == 78
+        Return "NUM+"
+    ElseIf KeyCode == 79
+        Return "NUM1"
+    ElseIf KeyCode == 80
+        Return "NUM2"
+    ElseIf KeyCode == 81
+        Return "NUM3"
+    ElseIf KeyCode == 82
+        Return "NUM0"
+    ElseIf KeyCode == 83
+        Return "NUM."
+    ElseIf KeyCode == 87
+        Return "F11"
+    ElseIf KeyCode == 88
+        Return "F12"
+    ElseIf KeyCode == 156
+        Return "NUM Enter"
+    ElseIf KeyCode == 157
+        Return "Right Control"
+    ElseIf KeyCode == 181
+        Return "NUM/"
+    ElseIf KeyCode == 183
+        Return "0"
+    ElseIf KeyCode == 184
+        Return "Right Alt"
+    ElseIf KeyCode == 197
+        Return "Pause"
+    ElseIf KeyCode == 199
+        Return "Home"
+    ElseIf KeyCode == 200
+        Return "Up Arrow"
+    ElseIf KeyCode == 201
+        Return "PgUp"
+    ElseIf KeyCode == 203
+        Return "Left Arrow"
+    ElseIf KeyCode == 205
+        Return "Right Arrow"
+    ElseIf KeyCode == 207
+        Return "End"
+    ElseIf KeyCode == 208
+        Return "Down Arrow"
+    ElseIf KeyCode == 209
+        Return "PgDown"
+    ElseIf KeyCode == 210
+        Return "Insert"
+    ElseIf KeyCode == 211
+        Return "Delete"
+    ElseIf KeyCode == 256
+        Return "Left Mouse Button"
+    ElseIf KeyCode == 257
+        Return "Right Mouse Button"
+    ElseIf KeyCode == 258
+        Return "Middle/Wheel Mouse Button"
+    ElseIf KeyCode == 259
+        Return "Mouse Button 3"
+    ElseIf KeyCode == 260
+        Return "Mouse Button 4"
+    ElseIf KeyCode == 261
+        Return "Mouse Button 5"
+    ElseIf KeyCode == 262
+        Return "Mouse Button 6"
+    ElseIf KeyCode == 263
+        Return "Mouse Button 7"
+    ElseIf KeyCode == 264
+        Return "Mouse Wheel Up"
+    ElseIf KeyCode == 265
+        Return "Mouse Wheel Down"
+    EndIf
+
+    Return "default"
 EndFunction
-
-
-
-  
-
