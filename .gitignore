@@ -40,3 +40,8 @@ Makefile
 # OS
 Thumbs.db
 .DS_Store
+
+# Compiled Papyrus output
+*.pex
+Papyrus Scripts/Compiled/
+Papyrus Scripts/Output/
