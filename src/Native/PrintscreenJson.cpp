@@ -3,11 +3,14 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace
 {
@@ -18,6 +21,9 @@ namespace
     struct CachedJson
     {
         json data = json::object();
+        // File name exactly as first requested. The cache is keyed case-
+        // insensitively, but the file is created/opened with this spelling.
+        std::string diskName;
         bool loaded = false;
         bool good = false;
         bool dirty = false;
@@ -53,6 +59,108 @@ namespace
         return p.generic_string();
     }
 
+    std::string CacheKey(const std::string& fileName)
+    {
+        // Papyrus is case-insensitive, so "PrintScreen" and "printscreen"
+        // name the same file. Fold the cache key to match, otherwise the two
+        // spellings get separate cache entries over one file on disk and the
+        // writes made through one of them are silently lost on save.
+        std::string key = fileName;
+        std::transform(key.begin(), key.end(), key.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return key;
+    }
+
+    std::string NormalizeKey(std::string key)
+    {
+        // Every key is folded to lower case, which is also what PapyrusUtil's
+        // JsonUtil did.
+        //
+        // Papyrus itself is case-insensitive, and the compiler emits a single
+        // string table in which entries are deduplicated without regard to
+        // case. A literal such as "LoopCount" therefore reaches this function
+        // spelled the way the string was FIRST seen in the script - normally
+        // the property declaration. Re-casing a property (Loopcount ->
+        // LoopCount) silently changes the key the game writes, which used to
+        // orphan the stored value and leave a duplicate behind in the file.
+        std::transform(key.begin(), key.end(), key.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return key;
+    }
+
+    // PapyrusUtil's JsonUtil did not store values on the root object; it
+    // grouped them into per-type containers:
+    //
+    //     { "string": { "path": ... }, "int": { ... }, "float": { ... } }
+    //
+    // This implementation stores them flat on the root instead, so a file
+    // carried over from PapyrusUtil parses fine but every lookup misses and
+    // the stale containers were written back out on every save. Hoist those
+    // values onto the root once and drop the containers.
+    //
+    // Returns true when the document was altered.
+    bool MigrateLegacyData(json& data)
+    {
+        if (!data.is_object()) {
+            return false;
+        }
+
+        bool changed = false;
+
+        // Collapse root keys that differ only by case. The already-lowercase
+        // spelling is canonical and wins; a differently-cased duplicate is a
+        // leftover from an older build and is discarded.
+        std::vector<std::string> rootKeys;
+        rootKeys.reserve(data.size());
+        for (auto it = data.begin(); it != data.end(); ++it) {
+            rootKeys.push_back(it.key());
+        }
+
+        for (const auto& rootKey : rootKeys) {
+            const auto normalized = NormalizeKey(rootKey);
+            if (normalized == rootKey || normalized.empty()) {
+                continue;
+            }
+
+            if (data.find(normalized) == data.end()) {
+                data[normalized] = data[rootKey];
+            } else {
+                logger::warn("PrintscreenJson: discarding duplicate key \"{}\"; keeping \"{}\"",
+                             rootKey, normalized);
+            }
+
+            data.erase(rootKey);
+            changed = true;
+        }
+
+        // Hoist the PapyrusUtil scalar containers. A value already present on
+        // the root is newer and is left alone.
+        static constexpr const char* kLegacyBuckets[] = { "string", "int", "float" };
+
+        for (const char* bucketName : kLegacyBuckets) {
+            const auto bucket = data.find(bucketName);
+            if (bucket == data.end()) {
+                continue;
+            }
+
+            if (bucket->is_object()) {
+                const json contents = *bucket;
+                for (auto it = contents.begin(); it != contents.end(); ++it) {
+                    const auto key = NormalizeKey(it.key());
+                    if (key.empty() || data.find(key) != data.end()) {
+                        continue;
+                    }
+                    data[key] = it.value();
+                }
+            }
+
+            data.erase(bucketName);
+            changed = true;
+        }
+
+        return changed;
+    }
+
     std::filesystem::path ResolvePath(const std::string& fileName)
     {
         // Deliberately uses PapyrusUtil's former JsonUtil location so an
@@ -67,18 +175,24 @@ namespace
                std::filesystem::path(fileName);
     }
 
-    CachedJson& LoadEntry(const std::string& normalizedName, bool forceReload = false)
+    CachedJson& LoadEntry(const std::string& fileName, bool forceReload = false)
     {
-        auto& entry = g_cache[normalizedName];
+        auto& entry = g_cache[CacheKey(fileName)];
+
+        if (entry.diskName.empty()) {
+            entry.diskName = fileName;
+        }
 
         if (entry.loaded && !forceReload) {
             return entry;
         }
 
+        auto diskName = std::move(entry.diskName);
         entry = CachedJson{};
+        entry.diskName = std::move(diskName);
         entry.loaded = true;
 
-        const auto path = ResolvePath(normalizedName);
+        const auto path = ResolvePath(entry.diskName);
         std::error_code ec;
 
         if (!std::filesystem::exists(path, ec) || ec) {
@@ -104,6 +218,12 @@ namespace
                 return entry;
             }
 
+            if (MigrateLegacyData(entry.data)) {
+                // Persisted by the next Save(); reads are already correct.
+                entry.dirty = true;
+                logger::info("PrintscreenJson: migrated legacy layout in {}", path.string());
+            }
+
             entry.good = true;
             entry.error.clear();
         }
@@ -116,9 +236,9 @@ namespace
         return entry;
     }
 
-    CachedJson& MutableEntry(const std::string& normalizedName)
+    CachedJson& MutableEntry(const std::string& fileName)
     {
-        auto& entry = LoadEntry(normalizedName);
+        auto& entry = LoadEntry(fileName);
 
         // A missing/corrupt file must still be writable so WriteJson()
         // can recreate it with default/current values.
@@ -129,10 +249,10 @@ namespace
         return entry;
     }
 
-    bool SaveEntry(const std::string& normalizedName)
+    bool SaveEntry(const std::string& fileName)
     {
-        auto& entry = MutableEntry(normalizedName);
-        const auto path = ResolvePath(normalizedName);
+        auto& entry = MutableEntry(fileName);
+        const auto path = ResolvePath(entry.diskName);
 
         try {
             std::error_code ec;
@@ -249,6 +369,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return value;
         }
@@ -264,6 +385,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return value;
         }
@@ -279,6 +401,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return value;
         }
@@ -294,6 +417,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return missing;
         }
@@ -320,6 +444,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return missing;
         }
@@ -349,6 +474,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return missing;
         }
@@ -375,6 +501,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return false;
         }
@@ -393,6 +520,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return false;
         }
@@ -411,6 +539,7 @@ namespace
         std::scoped_lock lock(g_jsonMutex);
 
         const auto name = NormalizeFileName(std::move(fileName));
+        key = NormalizeKey(std::move(key));
         if (name.empty() || key.empty()) {
             return false;
         }

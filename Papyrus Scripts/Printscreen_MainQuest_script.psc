@@ -187,33 +187,47 @@ Function ReadJson()
   ; Image
     Path = Printscreen_JSON_script.GetStringValue(jsonFilename,"Path")
     ImageType= Printscreen_JSON_script.GetStringValue(jsonFilename, "ImageType")
-    JPG_Compression = Printscreen_JSON_script.GetFloatValue(jsonFilename, "JPG_Compression")
+    JPG_Compression = Printscreen_JSON_script.GetFloatValue(jsonFilename, "JPG_Compression", -1.0)
     Mode = Printscreen_JSON_script.GetStringValue(jsonFilename, "Mode")
-    Duration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Duration")
-    FPS = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Fps")
-    LoopCount = Printscreen_JSON_script.GetIntValue(jsonFilename, "LoopCount")
-    Compression = Printscreen_JSON_script.GetIntValue(jsonFilename, "Compression")
-    DeltaMode = Printscreen_JSON_script.GetIntValue(jsonFilename, "DeltaMode")
-    Optimize = Printscreen_JSON_script.GetIntValue(jsonFilename, "Optimize") 
-    Quality = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Quality")
+    Duration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Duration", -1.0)
+    FPS = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Fps", -1.0)
+    LoopCount = Printscreen_JSON_script.GetIntValue(jsonFilename, "LoopCount", -1)
+    Compression = Printscreen_JSON_script.GetIntValue(jsonFilename, "Compression", -1)
+    DeltaMode = Printscreen_JSON_script.GetIntValue(jsonFilename, "DeltaMode", -1)
+    Optimize = Printscreen_JSON_script.GetIntValue(jsonFilename, "Optimize", -1) 
+    Quality = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Quality", -1.0)
     TIF_Mode =Printscreen_JSON_script.GetStringValue(jsonFilename, "Tif_Mode")
     DDS_Mode = Printscreen_JSON_script.GetStringValue(jsonFilename, "DDS_Mode")
 
     ; Video
-    VideoDuration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "VideoDuration" )
-    TargetResolution = Printscreen_JSON_script.GetIntValue(jsonFilename, "TargetResolution")
-    VideoFrameRate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoFrameRate")
-    QualityPreset = Printscreen_JSON_script.GetIntValue(jsonFilename, "QualityPreset")
-    VideoBitrate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoBitrate")
-    KeyframeInterval = Printscreen_JSON_script.GetFloatValue(jsonFilename, "KeyframeInterval")
-    EncoderPreference = Printscreen_JSON_script.GetIntValue(jsonFilename, "EncoderPreference")
-     RateControl = Printscreen_JSON_script.GetIntValue(jsonFilename, "RateControl")
+    VideoDuration = Printscreen_JSON_script.GetFloatValue(jsonFilename, "VideoDuration", -1.0)
+    TargetResolution = Printscreen_JSON_script.GetIntValue(jsonFilename, "TargetResolution", -1)
+    VideoFrameRate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoFrameRate", -1)
+    QualityPreset = Printscreen_JSON_script.GetIntValue(jsonFilename, "QualityPreset", -1)
+    VideoBitrate = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoBitrate", -1)
+    KeyframeInterval = Printscreen_JSON_script.GetFloatValue(jsonFilename, "KeyframeInterval", -1.0)
+    EncoderPreference = Printscreen_JSON_script.GetIntValue(jsonFilename, "EncoderPreference", -1)
+     RateControl = Printscreen_JSON_script.GetIntValue(jsonFilename, "RateControl", -1)
     VideoContainer = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoContainer")
 
     ; UI
-    Menu = Printscreen_JSON_script.GetIntValue(jsonFilename, "Menu") as BOOL
-    AutoUI = Printscreen_JSON_script.GetIntValue(jsonFilename, "AutoUI") as bool
-    Key_TakePhoto = Printscreen_JSON_script.GetIntValue(jsonFilename, "Key_TakePhoto")
+    ; Menu and AutoUI are Bool properties and cannot carry the -1 sentinel
+    ; (-1 as Bool is true), so "absent or wrong type" is resolved here rather
+    ; than in Validate_Menu()/Validate_AutoUI().
+    int menuRead = Printscreen_JSON_script.GetIntValue(jsonFilename, "Menu", -1)
+    if(menuRead < 0)
+        Menu = true                                 ; property default
+    else
+        Menu = menuRead as BOOL
+    endif
+
+    int autoUIRead = Printscreen_JSON_script.GetIntValue(jsonFilename, "AutoUI", -1)
+    if(autoUIRead < 0)
+        AutoUI = true                               ; property default
+    else
+        AutoUI = autoUIRead as bool
+    endif
+    Key_TakePhoto = Printscreen_JSON_script.GetIntValue(jsonFilename, "Key_TakePhoto", -1)
 
     Debug.Notification("PrintScreen: Config loaded from JSON ") 
 EndFunction
@@ -284,6 +298,10 @@ Function Validate_ImageType()
 EndFunction
 
 Function Validate_JPG_Compression()
+    if(JPG_Compression < 0.0)                   ; absent or wrong type in JSON
+        JPG_Compression = 90.0                 ; property default
+        return
+    endif
     if(JPG_Compression < 1.0)
         JPG_Compression = 1.0
     elseif(JPG_Compression > 100.0)
@@ -298,6 +316,10 @@ Function Validate_Mode()
 EndFunction
 
 Function Validate_Duration()
+    if(Duration < 0.0)                   ; absent or wrong type in JSON
+        Duration = 5.0                 ; property default
+        return
+    endif
 if(duration <=0 || Duration>15)
     if(Duration < 1.0)
         Duration = 1.0              
@@ -308,18 +330,30 @@ Endif
 EndFunction
 
 Function Validate_Fps()
+    if(Fps < 0.0)                   ; absent or wrong type in JSON
+        Fps = 15.0                 ; property default
+        return
+    endif
 If(FPS == 0 || Fps < 15)
 Fps=10
 Endif
 EndFunction
 
 Function Validate_LoopCount()
+    if(LoopCount == -1)                   ; absent or wrong type in JSON
+        LoopCount = 0                 ; property default
+        return
+    endif
 if(LoopCount<0 || Loopcount > 20)
 LoopCount = 0
 EndIf
 EndFunction
 
 Function Validate_Compression()
+    if(Compression == -1)                   ; absent or wrong type in JSON
+        Compression = 9                 ; property default
+        return
+    endif
     if(Compression < 0)
         Compression = 0
     elseif(Compression > 9)
@@ -328,6 +362,10 @@ Function Validate_Compression()
 EndFunction
 
 Function Validate_DeltaMode()
+    if(DeltaMode == -1)                   ; absent or wrong type in JSON
+        DeltaMode = 0                 ; property default
+        return
+    endif
     if(DeltaMode < 0)
         DeltaMode = 0
     elseif(DeltaMode > 2)
@@ -336,6 +374,10 @@ Function Validate_DeltaMode()
 EndFunction
 
 Function Validate_Optimize()
+    if(Optimize == -1)                   ; absent or wrong type in JSON
+        Optimize = 1                 ; property default
+        return
+    endif
     if(Optimize < 0)
         Optimize = 0
     elseif(Optimize > 1)
@@ -344,6 +386,10 @@ Function Validate_Optimize()
 EndFunction
 
 Function Validate_Quality()
+    if(Quality < 0.0)                   ; absent or wrong type in JSON
+        Quality = 0.85                 ; property default
+        return
+    endif
     if(Quality < 0.0)
         Quality = 0.0
     elseif(Quality > 1.0)
@@ -381,12 +427,20 @@ Function Validate_DDS_Mode()
 EndFunction
 
 Function Validate_VideoDuration()
+    if(VideoDuration < 0.0)                   ; absent or wrong type in JSON
+        VideoDuration = 10.0                 ; property default
+        return
+    endif
 If(VideoDuration <= 0.0 || VideoDuration > 120.0)
 VideoDuration =15.0
 endif
 EndFunction
 
 Function Validate_TargetResolution()
+    if(TargetResolution == -1)                   ; absent or wrong type in JSON
+        TargetResolution = 0                 ; property default
+        return
+    endif
 If(TargetResolution==0 || TargetResolution == 1 || TargetResolution == 2 || TargetResolution == 3|| TargetResolution == 4)
 return
 else
@@ -395,6 +449,10 @@ endif
 EndFunction
 
 Function Validate_VideoFrameRate()
+    if(VideoFrameRate == -1)                   ; absent or wrong type in JSON
+        VideoFrameRate = 30                 ; property default
+        return
+    endif
 If(VideoFrameRate == 30 || VideoFrameRate == 60)
 return
 else
@@ -404,6 +462,10 @@ EndIf
 EndFunction
 
 Function Validate_QualityPreset()
+    if(QualityPreset == -1)                   ; absent or wrong type in JSON
+        QualityPreset = 2                 ; property default
+        return
+    endif
 if(QualityPreset==0 || QualityPreset == 1 || QualityPreset == 2  || QualityPreset==3 || QualityPreset == 4)
 return
 else
@@ -412,6 +474,10 @@ endif
 EndFunction
 
 Function Validate_VideoBitrate()
+    if(VideoBitrate == -1)                   ; absent or wrong type in JSON
+        VideoBitrate = 8000                 ; property default
+        return
+    endif
     if (QualityPreset == 4)  ; Custom preset — allow user-defined bitrate
         if (VideoBitrate < 1000)
             VideoBitrate = 1000
@@ -424,6 +490,10 @@ Function Validate_VideoBitrate()
 EndFunction
 
 Function Validate_KeyframeInterval()
+    if(KeyframeInterval < 0.0)                   ; absent or wrong type in JSON
+        KeyframeInterval = 2.0                 ; property default
+        return
+    endif
 if(KeyframeInterval< 0.2 || KeyframeInterval <= 10.0)
 return
 else
@@ -432,6 +502,10 @@ endif
 EndFunction
 
 Function Validate_EncoderPreference()
+    if(EncoderPreference == -1)                   ; absent or wrong type in JSON
+        EncoderPreference = 0                 ; property default
+        return
+    endif
 If(EncoderPreference == 0 || EncoderPreference == 1 || EncoderPreference == 2)
 return
 else
@@ -440,6 +514,10 @@ endif
 EndFunction
 
 Function Validate_RateControl()
+    if(RateControl == -1)                   ; absent or wrong type in JSON
+        RateControl = 1                 ; property default
+        return
+    endif
 if(RateControl == 0 || RateControl == 1 || RateControl ==2)
 return
 else
@@ -468,8 +546,13 @@ Endif
 EndFunction
 
 Function Validate_Key_TakePhoto()
-if(Key_TakePhoto < 0 || Key_TakePhoto >256)
-Key_takePhoto = 14
+    if(Key_TakePhoto == -1)                   ; absent or wrong type in JSON
+        Key_TakePhoto = 14                 ; property default
+        return
+    endif
+if(!Printscreen_MAP_script.IsValidKeyCode(Key_TakePhoto))
+    Debug.Notification("Invalid photo key. Key reset to Backspace")
+    Key_TakePhoto = 14
 endif
 EndFunction
 

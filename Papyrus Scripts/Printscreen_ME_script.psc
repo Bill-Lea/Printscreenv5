@@ -27,7 +27,7 @@ elseif(ttemp == 3)
 elseif(ttemp == 4)
     res = "2160p"
 endif
-    String Keyname = Map.GetKeyName(MainQuest.Key_TakePhoto)
+    String Keyname = Printscreen_MAP_script.GetKeyName(MainQuest.Key_TakePhoto)
 	
 if(MainQuest.ImageType=="PNG"||Mainquest.ImageType=="BMP"||MainQuest.ImageType == "GIF")
 

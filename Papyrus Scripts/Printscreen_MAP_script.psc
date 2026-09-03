@@ -4,7 +4,7 @@ Printscreen_MainQuest_script Property MainQuest Auto
 
 ; Pure-Papyrus replacement for the former JContainers JIntMap lookup.
 ; Preserves the existing GetKeyName(Int KeyCode) interface.
-String Function GetKeyName(Int KeyCode)
+String Function GetKeyName(Int KeyCode) Global
     If KeyCode == 1
         Return "Escape"
     ElseIf KeyCode == 2
@@ -230,4 +230,14 @@ String Function GetKeyName(Int KeyCode)
     EndIf
 
     Return "default"
+EndFunction
+
+; True when KeyCode is one of the codes GetKeyName() actually maps.
+; The valid codes are not contiguous - keyboard 1-211, mouse 256-263,
+; wheel 264-265, with gaps throughout - so a range check cannot detect a
+; bogus value and the map itself is the only reliable test. Used by
+; Printscreen_MainQuest_script.Validate_Key_TakePhoto() to reject codes
+; typed straight into the JSON file rather than bound through the MCM.
+Bool Function IsValidKeyCode(Int KeyCode) Global
+    Return GetKeyName(KeyCode) != "default"
 EndFunction
