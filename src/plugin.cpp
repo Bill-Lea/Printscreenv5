@@ -1,4 +1,4 @@
-// plugin.cpp — PrintScreen v4.0 (refactored)
+// plugin.cpp — PrintScreen v5.0 (refactored)
 
 #include "PCH.h"
 #include "Config.h"
@@ -10,7 +10,7 @@
 namespace
 {
     constexpr std::string_view kPluginName = "Printscreen"sv;
-    constexpr REL::Version kPluginVersion{ 4, 0, 0 };
+    constexpr REL::Version kPluginVersion{ 5, 0, 0 };
 }
 
 extern "C" __declspec(dllexport)
