@@ -45,3 +45,6 @@ Thumbs.db
 *.pex
 Papyrus Scripts/Compiled/
 Papyrus Scripts/Output/
+
+# Resource compiler temp files
+src/RCa*
