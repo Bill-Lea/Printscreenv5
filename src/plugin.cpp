@@ -1,15 +1,16 @@
-// plugin.cpp — PrintScreen v4.0 (refactored)
+// plugin.cpp — PrintScreen v5.0 (refactored)
 
 #include "PCH.h"
 #include "Config.h"
 #include "logger.h"
 #include "papyrus/Bindings.h"
+#include "Native/PrintscreenJson.h"
 #include "capture/TempFileGuard.h"
 
 namespace
 {
     constexpr std::string_view kPluginName = "Printscreen"sv;
-    constexpr REL::Version kPluginVersion{ 4, 0, 0 };
+    constexpr REL::Version kPluginVersion{ 5, 0, 0 };
 }
 
 extern "C" __declspec(dllexport)
@@ -47,6 +48,11 @@ bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 
     if (!papyrus->Register(PapyrusBindings::Register)) {
         logger::error("Failed to register Papyrus functions");
+        return false;
+    }
+
+    if (!papyrus->Register(PrintscreenJson::Register)) {
+        logger::error("Failed to register Printscreen JSON Papyrus functions");
         return false;
     }
 

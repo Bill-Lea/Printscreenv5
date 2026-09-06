@@ -29,7 +29,7 @@ BEGIN
             VALUE "FileDescription", "Printscreen SKSE Plugin"
             VALUE "FileVersion", STRINGIZE(VERSION_MAJOR) "." STRINGIZE(VERSION_MINOR) "." STRINGIZE(VERSION_PATCH) "." STRINGIZE(VERSION_BUILD)
             VALUE "InternalName", "Printscreen"
-            VALUE "LegalCopyright", "Copyright (C) 2026"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Bill Lea. Licensed under GPL-3.0-or-later."
             VALUE "OriginalFilename", "Printscreen.dll"
             VALUE "ProductName", "Printscreen"
             VALUE "ProductVersion", STRINGIZE(VERSION_MAJOR) "." STRINGIZE(VERSION_MINOR) "." STRINGIZE(VERSION_PATCH)
