@@ -48,3 +48,10 @@ Papyrus Scripts/Output/
 
 # Resource compiler temp files
 src/RCa*
+
+# Local caches and stray archives
+.cache/
+src/*.zip
+
+# Release packaging output
+dist/

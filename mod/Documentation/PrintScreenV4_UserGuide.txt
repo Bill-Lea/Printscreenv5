@@ -1,0 +1,448 @@
+[size=6][b]PrintScreen V4  -  User Guide[/b][/size]
+
+[b]Version:[/b] 4.0.0  
+[b]Author:[/b] William G Lea  
+[b]Game:[/b] Skyrim Special Edition (SKSE64 plugin)  
+[b]Platform:[/b] Windows 10/11
+
+[line]
+[size=5][b]Table of Contents[/b][/size]
+
+[list=1]
+[*][url=#overview]Overview[/url]
+[*][url=#installation]Installation[/url]
+[*][url=#ini-configuration]INI Configuration[/url]
+[/list][url=#configuration-file-location]Configuration File Location[/url] (sub-item)
+[url=#logging-section]Logging Section[/url] (sub-item)
+[url=#performance-section]Performance Section[/url] (sub-item)
+[url=#capture-section]Capture Section[/url] (sub-item)
+[url=#complete-default-ini]Complete Default INI[/url] (sub-item)
+[list=1]
+[*][url=#usage]Usage[/url]
+[/list][url=#taking-screenshots]Taking Screenshots[/url] (sub-item)
+[url=#capture-formats]Capture Formats[/url] (sub-item)
+[url=#video-capture]Video Capture[/url] (sub-item)
+[url=#animated-images-gifapng]Animated Images (GIF/APNG)[/url] (sub-item)
+[list=1]
+[*][url=#troubleshooting]Troubleshooting[/url]
+[*][url=#log-file]Log File[/url]
+[*][url=#compatibility-notes]Compatibility Notes[/url]
+[/list]
+[line]
+[size=5][b]Overview[/b][/size]
+
+PrintScreen V4 is a Skyrim Special Edition SKSE plugin that captures screenshots and video directly from the game. Unlike the Steam screenshot system, PrintScreen captures the raw desktop image (including any overlays, ENB, ReShade, or other post-processing effects) and saves it in high quality.
+
+[b]Key Features:[/b]
+
+[list]
+[*][b]Still images:[/b] PNG, JPEG, BMP, TIFF, DDS
+[*][b]Animated images:[/b] GIF, Animated PNG (APNG)
+[*][b]Video recording:[/b] H.264 MP4 with hardware encoding support
+[*][b]UI control:[/b] Auto-hide HUD/menus before capture
+[*][b]GPU scaling:[/b] Hardware-accelerated resolution scaling for video
+[*][b]Zero game integration:[/b] Uses Windows Desktop Duplication API  -  no hooks into the game renderer
+[/list]
+[line]
+[size=5][b]Installation[/b][/size]
+
+[size=4][b]Requirements[/b][/size]
+
+[list]
+[*]Skyrim Special Edition (version 1.5.39 or later, including 1.6.x AE builds)
+[*][url=https://skse.silverlock.org/]SKSE64[/url] (Script Extender) installed
+[*]Windows 10 or 11 with DirectX 11 support
+[*]For hardware video encoding: a modern GPU (NVIDIA, AMD, or Intel)
+[/list]
+[size=4][b]Files[/b][/size]
+
+Place these in your Skyrim [font=Courier New]Data\SKSE\Plugins\[/font] folder (typically managed by Mod Organizer 2 or Vortex):
+
+[code]Printscreen.dll          <- The main plugin
+PrintScreen.ini          <- User configuration file (auto-created if missing)
+[/code]
+
+[size=4][b]Auto-Created Files[/b][/size]
+
+On first run, the plugin creates:
+
+[list]
+[*][font=Courier New]C:\Users\<You>\Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini[/font]
+[*][font=Courier New]C:\Users\<You>\Documents\My Games\Skyrim Special Edition\SKSE\printscreen.log[/font]
+[/list]
+[line]
+[size=5][b]INI Configuration[/b][/size]
+
+The [font=Courier New]PrintScreen.ini[/font] file controls all plugin behavior. It is organized into three sections: [font=Courier New][Logging][/font], [font=Courier New][Performance][/font], and [font=Courier New][Capture][/font].
+
+[size=4][b]Configuration File Location[/b][/size]
+
+[code]C:\Users\<YourUsername>\Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini
+[/code]
+
+You can edit this file with any text editor (Notepad, VS Code, etc.). Changes take effect when the game restarts, or immediately if you use the [font=Courier New]ReloadConfig()[/font] Papyrus function from a mod.
+
+[line]
+[size=4][b]Logging Section[/b][/size]
+
+Controls how much information the plugin writes to its log file and/or console.
+
+[size=3][b][font=Courier New]LogLevel[/font][/b][/size]
+
+| Value | Name | Description |
+|-------|------|-------------|
+| [font=Courier New]0[/font] or [font=Courier New]NONE[/font] | None | No logging at all |
+| [font=Courier New]1[/font] or [font=Courier New]ERROR[/font] | Error | Only critical errors |
+| [font=Courier New]2[/font] or [font=Courier New]WARN[/font] | Warning | Errors and warnings |
+| [font=Courier New]3[/font] or [font=Courier New]INFO[/font] | Info | General operational info [url=default]i[/url][/i] |
+| [font=Courier New]4[/font] or [font=Courier New]DEBUG[/font] | Debug | Detailed diagnostic output |
+| [font=Courier New]5[/font] or [font=Courier New]TRACE[/font] | Trace | Extremely verbose (every operation) |
+
+[b]Example:[/b]
+[code][Logging]
+LogLevel=INFO
+[/code]
+
+[quote][b]Recommendation:[/b] Use [font=Courier New]INFO[/font] for normal play. Use [font=Courier New]DEBUG[/font] only when reporting a bug. [font=Courier New]TRACE[/font] will create very large log files.[/quote]
+
+[size=3][b][font=Courier New]ConsoleOutput[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Also print log messages to the in-game console
+[*][font=Courier New]false[/font]  -  Log file only [url=default: true]i[/url][/i]
+[/list]
+[size=3][b][font=Courier New]FileOutput[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Write log messages to [font=Courier New]printscreen.log[/font] [url=default]i[/url][/i]
+[*][font=Courier New]false[/font]  -  Disable log file output
+[/list]
+[size=3][b][font=Courier New]ShowTimestamps[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Prefix each log line with a timestamp [url=default]i[/url][/i]
+[*][font=Courier New]false[/font]  -  Plain log messages without timestamps
+[/list]
+[size=3][b][font=Courier New]MaxLogFileSizeMB[/font][/b][/size]
+
+Maximum size of the log file in megabytes before it is automatically rotated (old log renamed, new one started).
+
+[list]
+[*][b]Range:[/b] 1-50
+[*][b]Default:[/b] 8
+[/list]
+[b]Example:[/b]
+[code][Logging]
+LogLevel=INFO
+ConsoleOutput=true
+FileOutput=true
+ShowTimestamps=true
+MaxLogFileSizeMB=8
+[/code]
+
+[line]
+[size=4][b]Performance Section[/b][/size]
+
+Controls CPU usage during image encoding.
+
+[size=3][b][font=Courier New]ParallelCompression[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Use multiple CPU threads for PNG/APNG compression [url=default]i[/url][/i]
+[*][font=Courier New]false[/font]  -  Single-threaded encoding (slower, less CPU usage)
+[/list]
+[size=3][b][font=Courier New]CompressionThreads[/font][/b][/size]
+
+Number of threads to use for parallel compression.
+
+[list]
+[*][font=Courier New]0[/font]  -  Auto-detect (uses number of CPU cores) [url=default]i[/url][/i]
+[*][font=Courier New]1[/font]-[font=Courier New]16[/font]  -  Explicit thread count
+[/list]
+[quote][b]Note:[/b] Only applies when [font=Courier New]ParallelCompression=true[/font]. For most users, [font=Courier New]0[/font] (auto) is optimal.[/quote]
+
+[b]Example:[/b]
+[code][Performance]
+ParallelCompression=true
+CompressionThreads=0
+[/code]
+
+[line]
+[size=4][b]Capture Section[/b][/size]
+
+Controls what information is logged during capture operations.
+
+[size=3][b][font=Courier New]LogCaptureProgress[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Log progress messages during frame capture (e.g., "Frame 12/60")
+[*][font=Courier New]false[/font]  -  Silent capture [url=default]i[/url][/i]
+[/list]
+[size=3][b][font=Courier New]LogTimingInfo[/font][/b][/size]
+
+[list]
+[*][font=Courier New]true[/font]  -  Log how long each capture operation takes (useful for benchmarking)
+[*][font=Courier New]false[/font]  -  Don't log timing [url=default]i[/url][/i]
+[/list]
+[b]Example:[/b]
+[code][Capture]
+LogCaptureProgress=false
+LogTimingInfo=false
+[/code]
+
+[line]
+[size=4][b]Complete Default INI[/b][/size]
+
+If no INI file exists, the plugin creates this automatically:
+
+[code]; PrintScreen V4 Configuration
+; Located in: Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini
+
+[Logging]
+LogLevel=INFO
+ConsoleOutput=true
+FileOutput=true
+ShowTimestamps=true
+MaxLogFileSizeMB=8
+
+[Performance]
+ParallelCompression=true
+CompressionThreads=0
+
+[Capture]
+LogCaptureProgress=false
+LogTimingInfo=false
+[/code]
+
+[line]
+[size=5][b]Usage[/b][/size]
+
+[size=4][b]Taking Screenshots[/b][/size]
+
+Screenshots are triggered by:
+
+[list=1]
+[*][b]Papyrus script call[/b]  -  Mods using the PrintScreen API can request captures programmatically
+[*][b]MCM menu[/b]  -  If a companion mod provides a Mod Configuration Menu
+[/list]
+The plugin automatically:
+[list=1]
+[*]Hides the UI (HUD, compass, crosshair  -  everything)
+[*]Waits one frame for the UI to clear
+[*]Captures the screen
+[*]Restores the UI
+[*]Saves the image
+[/list]
+[size=4][b]Capture Formats[/b][/size]
+
+| Format | Extension | Best For | Notes |
+|--------|-----------|----------|-------|
+| [b]PNG[/b] | [font=Courier New].png[/font] | General use, editing | Lossless, good compression |
+| [b]JPEG[/b] | [font=Courier New].jpg[/font] | Quick sharing, small size | Adjustable quality 1-100 |
+| [b]BMP[/b] | [font=Courier New].bmp[/font] | Raw pixel data | Uncompressed, large files |
+| [b]TIFF[/b] | [font=Courier New].tif[/font] | Professional editing | Optional LZW, ZIP, CCITT, RLE compression |
+| [b]DDS[/b] | [font=Courier New].dds[/font] | Texture work, game mods | BC1-BC7 GPU compression modes |
+| [b]GIF[/b] | [font=Courier New].gif[/font] | Simple animations | 256 colors, small file size |
+| [b]APNG[/b] | [font=Courier New].png[/font] | High-quality animations | Full color, transparency support |
+| [b]H264/MP4[/b] | [font=Courier New].mp4[/font] | Video recording | Hardware encoding, full quality |
+
+[size=3][b]JPEG Quality[/b][/size]
+
+When using JPEG format, quality is adjustable from 1 (very blocky, very small) to 100 (near-lossless, larger file). Default is 95  -  a good balance of quality and size.
+
+[size=3][b]DDS Compression Modes[/b][/size]
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| [font=Courier New]BC1[/font] | 4x compression, 1-bit alpha | Opaque textures [url=default]i[/url][/i] |
+| [font=Courier New]BC2[/font] | 4x compression, 4-bit alpha | Textures with sharp edges |
+| [font=Courier New]BC3[/font] | 4x compression, 8-bit alpha | Textures with smooth transparency |
+| [font=Courier New]BC4[/font] | 2x compression, grayscale | Height maps, single-channel data |
+| [font=Courier New]BC5[/font] | 2x compression, two channels | Normal maps |
+| [font=Courier New]BC6H[/font] | 6x compression, HDR | High dynamic range textures |
+| [font=Courier New]BC7_SLOW[/font] | 3x compression, highest quality | Premium textures (slowest) |
+| [font=Courier New]BC7_NORMAL[/font] | 3x compression, balanced | General purpose [url=recommended]i[/url][/i] |
+| [font=Courier New]BC7_FAST[/font] | 3x compression, fastest | Quick exports |
+
+[line]
+[size=4][b]Video Capture (H.264/MP4)[/b][/size]
+
+Video recording uses your GPU's hardware encoder when available (NVIDIA NVENC, AMD AMF, or Intel QuickSync). Falls back to software encoding if hardware is unavailable.
+
+[size=3][b]Video Parameters[/b][/size]
+
+| Parameter | Options | Description |
+|-----------|---------|-------------|
+| [b]Duration[/b] | 1-120 seconds | How long to record |
+| [b]Resolution[/b] | Native / 720p / 1080p / 1440p / 4K | Output resolution (GPU scaled from desktop) |
+| [b]Frame Rate[/b] | 30 / 60 fps | Target capture frame rate |
+| [b]Quality Preset[/b] | Low / Medium / High / VeryHigh / Custom | Built-in quality profiles |
+| [b]Bitrate[/b] | 1000-50000 kbps | Data rate (only when Preset = Custom) |
+| [b]Keyframe Interval[/b] | 1-10 seconds | How often a full frame is stored |
+| [b]Encoder[/b] | Auto / Prefer Hardware / Force Software | GPU vs CPU encoding |
+| [b]Rate Control[/b] | CBR / VBR / CQP | Bitrate behavior mode |
+
+[size=3][b]Quality Presets[/b][/size]
+
+| Preset | Target Use | Typical Bitrate |
+|--------|-----------|----------------|
+| Low | Quick previews, small files | ~4 Mbps |
+| Medium | General sharing | ~8 Mbps |
+| High | Quality archiving | ~16 Mbps |
+| VeryHigh | Maximum quality | ~25 Mbps |
+| Custom | User-defined bitrate | You set it |
+
+[size=3][b]Rate Control Modes[/b][/size]
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| [b]CBR[/b] | Constant Bitrate  -  fixed data rate | Streaming, consistent file sizes |
+| [b]VBR[/b] [url=default]i[/url][/i] | Variable Bitrate  -  allocates more bits for complex scenes | General use, best quality per size |
+| [b]CQP[/b] | Constant Quality  -  fixed visual quality, variable file size | Archiving, when you don't care about file size |
+
+[quote][b]Note:[/b] When using CQP, the Bitrate setting is ignored. Use the Quality value (1-100) instead.[/quote]
+
+[size=3][b]Hardware vs Software Encoding[/b][/size]
+
+| Setting | Behavior |
+|---------|----------|
+| [b]Auto[/b] [url=default]i[/url][/i] | Uses hardware if available, falls back to software |
+| [b]Prefer Hardware[/b] | Requires hardware encoder; fails if none available |
+| [b]Force Software[/b] | Disables hardware encoding entirely |
+
+[quote][b]AMD Users (RX 6700 XT and similar):[/b] The plugin automatically uses AMD's AMF encoder through Media Foundation. No special configuration needed.[/quote]
+
+[line]
+[size=4][b]Animated Images (GIF/APNG)[/b][/size]
+
+For short animated captures without the overhead of video encoding:
+
+| Parameter | Range | Description |
+|-----------|-------|-------------|
+| [b]Duration[/b] | 1-15 seconds | Max 15s for animated formats |
+| [b]FPS[/b] | 1-60 | Frames per second |
+| [b]Loop Count[/b] | 0 = infinite, 1-65535 | How many times to loop |
+| [b]Delta Mode[/b] | 0 = region extraction, 1 = true delta | Optimization method |
+| [b]Optimize[/b] | 0 = off, 1 = on | File size optimization |
+
+[b]Delta Mode:[/b]
+[list]
+[*][font=Courier New]0[/font] (region extraction): Only stores changed rectangular regions between frames (smaller files for mostly-static scenes)
+[*][font=Courier New]1[/font] (true delta): Computes pixel differences (better for full-screen motion)
+[/list]
+[line]
+[size=5][b]Troubleshooting[/b][/size]
+
+[size=4][b]No Screenshots Are Saved[/b][/size]
+
+[list=1]
+[*]Check the log file: [font=Courier New]Documents\My Games\Skyrim Special Edition\SKSE\printscreen.log[/font]
+[*]Ensure [font=Courier New]FileOutput=true[/font] in the [font=Courier New][Logging][/font] section
+[*]Verify the SKSE folder exists and is writable
+[*]Check if another overlay (Steam, Discord, GeForce Experience) is interfering
+[/list]
+[size=4][b]Videos Won't Play / Are Corrupted[/b][/size]
+
+[list=1]
+[*]Ensure the capture completed normally (not forcibly terminated)
+[*]For MP4, the file must be properly finalized  -  abrupt game crashes may leave it unplayable
+[*]Try a different video player (VLC, MPC-HC, PotPlayer)
+[/list]
+[size=4][b]High CPU Usage During Capture[/b][/size]
+
+[list=1]
+[*]Set [font=Courier New]ParallelCompression=false[/font] in [font=Courier New][Performance][/font]
+[*]Or reduce [font=Courier New]CompressionThreads[/font] to a lower number
+[*]Use JPEG instead of PNG for stills (much faster encoding)
+[*]For video, ensure hardware encoding is working (check log for encoder selection)
+[/list]
+[size=4][b]Log File Is Too Large[/b][/size]
+
+[list=1]
+[*]Set [font=Courier New]LogLevel=ERROR[/font] or [font=Courier New]LogLevel=WARN[/font]
+[*]Set [font=Courier New]LogCaptureProgress=false[/font] and [font=Courier New]LogTimingInfo=false[/font]
+[*]Reduce [font=Courier New]MaxLogFileSizeMB[/font] to force earlier rotation
+[/list]
+[size=4][b]UI Not Hiding Properly[/b][/size]
+
+[list=1]
+[*]Some mods add UI elements that bypass the [font=Courier New]tm[/font] console command
+[*]The plugin uses the same mechanism as the [font=Courier New]tm[/font] command  -  if [font=Courier New]tm[/font] doesn't hide it, PrintScreen can't either
+[*]Try toggling [font=Courier New]autoUI[/font] off in the mod's MCM if available
+[/list]
+[size=4][b]"Unknown INI key" Warnings[/b][/size]
+
+If you see warnings like [font=Courier New]Unknown INI key: 'SomeKey'[/font] in the log:
+
+[list=1]
+[*]Check for typos in your INI file
+[*]The plugin validates all keys and warns about unrecognized ones
+[*]See the full list of valid keys in the [url=PrintScreenV4_TechnicalReference.md]Technical Reference[/url]
+[/list]
+[line]
+[size=5][b]Log File[/b][/size]
+
+Location:
+[code]C:\Users\<You>\Documents\My Games\Skyrim Special Edition\SKSE\printscreen.log
+[/code]
+
+The log file is overwritten each time the game starts. When it reaches [font=Courier New]MaxLogFileSizeMB[/font], it is renamed to [font=Courier New]printscreen.log.old[/font] and a new file is started.
+
+[size=4][b]Log Format[/b][/size]
+
+With [font=Courier New]ShowTimestamps=true[/font] (default):
+[code][2025-01-15 14:32:01.123] [info] Printscreen: SKSEPlugin_Load starting (v4.0 refactored)
+[2025-01-15 14:32:01.145] [info] Runtime: 1.6.640
+[2025-01-15 14:32:01.167] [info] Printscreen v4.0 loaded successfully
+[2025-01-15 14:35:22.891] [info] CaptureSession: Starting capture (PNG, 1920x1080)
+[2025-01-15 14:35:22.903] [info] UIController::HideAll: showMenus set to false
+[/code]
+
+[line]
+[size=5][b]Compatibility Notes[/b][/size]
+
+[size=4][b]Safe to Use With[/b][/size]
+
+[list]
+[*]ENB Series
+[*]ReShade
+[*]Steam Overlay
+[*]Discord Overlay
+[*]NVIDIA Overlay / ShadowPlay
+[*]AMD ReLive
+[*]Any SKSE plugin that doesn't hook the same internals
+[/list]
+[size=4][b]Potential Conflicts[/b][/size]
+
+[list]
+[*][b]Other screenshot mods[/b] that use the same Papyrus function names (rare)
+[*][b]Mods that force [font=Courier New]showMenus[/font] on/off[/b]  -  may interfere with UI hiding
+[*][b]Fullscreen borderless window tools[/b]  -  may affect Desktop Duplication
+[/list]
+[size=4][b]Runtime Versions Supported[/b][/size]
+
+The plugin explicitly supports these Skyrim SE versions:
+
+[list]
+[*]1.5.39, 1.5.97 (Old SE)
+[*]1.6.318, 1.6.353, 1.6.629, 1.6.640, 1.6.659, 1.6.678
+[*]1.6.1130, 1.6.1170 (Anniversary Edition updates)
+[/list]
+[line]
+[size=5][b]Quick Reference Card[/b][/size]
+
+[code]; === Essential Settings ===
+[Logging]
+LogLevel=INFO              ; NONE, ERROR, WARN, INFO, DEBUG, TRACE
+
+[Performance]
+ParallelCompression=true     ; true = faster, more CPU; false = slower, less CPU
+CompressionThreads=0         ; 0 = auto, or 1-16
+
+[Capture]
+LogTimingInfo=false          ; true to see capture timing in log
+[/code]
+
+[line]
+[i]Last updated: 2026-06-03[/i]  
+[i]For technical details, see [url=PrintScreenV4_TechnicalReference.md]PrintScreen V4 Technical Reference[/url][/i]

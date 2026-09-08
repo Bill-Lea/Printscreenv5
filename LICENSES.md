@@ -41,6 +41,11 @@ in a modlist, or elsewhere) must, per GPL-3.0 section 6:
    CommonLibSSE-NG revision (currently Git tag `v6.4.0`, commit
    `e7863a71523a2896c92ea9d3105c0d121dcdba0d`) and the build steps.
    The canonical source is https://github.com/Bill-Lea/Printscreenv5.
+   Each release is tagged (`v5.0.0` for PrintScreen 5.0.0) and the
+   matching GitHub Release carries a `Printscreen-<version>-corresponding-source.7z`
+   bundle containing this repository plus the source of every statically
+   linked dependency, as produced by `tools/Make-CorrespondingSource.ps1`.
+   Build steps are in [BUILD.md](BUILD.md).
 2. **Include the license texts.** Ship [LICENSE](LICENSE) (GPL-3.0),
    [LICENSE-CommonLibSSE-NG-EXCEPTIONS.md](LICENSE-CommonLibSSE-NG-EXCEPTIONS.md),
    and this file alongside the binary.
@@ -171,7 +176,10 @@ OpenVR as a Git submodule. In this build the REX INI/JSON/TOML helpers,
 Xbyak trampoline support, Skyrim VR support, and tests are all disabled
 (see the top-level `CMakeLists.txt`), so OpenVR (BSD-3-Clause, © 2015 Valve
 Corporation) and xbyak are not linked into `Printscreen.dll`. The remaining
-libraries are covered in the sections below.
+libraries are covered in the sections below. CommonLibSSE-NG also vendors
+the hde64 instruction-length decoder from MinHook when
+`SKSE_SUPPORT_PATCH_SAFETY` is ON (the default, and ON in this build); see
+section 15.
 
 ---
 
@@ -454,6 +462,91 @@ turned on.
 
 ---
 
+## 15. hde64 (Hacker Disassembler Engine 64, from MinHook)
+
+- **Source:** https://github.com/TsudaKageyu/minhook (files `src/hde/hde64.c`,
+  `src/hde/hde64.h`, `src/hde/pstdint.h`, `src/hde/table64.h`)
+- **Version:** MinHook Git tag `v1.3.4` (fetched by CommonLibSSE-NG via CMake
+  FetchContent; only the `src/hde` subdirectory is compiled)
+- **License:** BSD-2-Clause
+- **Copyright:** © 2009-2017 Tsuda Kageyu (MinHook);
+  © 2008-2009 Vyacheslav Patkov (Hacker Disassembler Engine)
+
+Compiled into CommonLibSSE-NG's `Trampoline.cpp` patch-site validation when
+`SKSE_SUPPORT_PATCH_SAFETY` is ON, and therefore linked into
+`Printscreen.dll`. The BSD-2-Clause license requires that the following
+notice be reproduced in the documentation accompanying binary distributions.
+
+```
+MinHook - The Minimalistic API Hooking Library for x64/x86
+Copyright (C) 2009-2017 Tsuda Kageyu.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER
+OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+================================================================================
+Portions of this software are Copyright (c) 2008-2009, Vyacheslav Patkov.
+================================================================================
+Hacker Disassembler Engine 64 C
+Copyright (c) 2008-2009, Vyacheslav Patkov.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+ 1. Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+ 2. Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+---
+
+## Windows system libraries
+
+`Printscreen.dll` also links against Direct3D 11, DXGI, Windows Imaging
+Component, Media Foundation, and the Windows SDK / MSVC C runtime
+(`x64-windows-static-md` triplet, dynamic CRT). These are System Libraries
+under GPL-3.0 section 1 and are excluded from Corresponding Source. Skyrim
+Special Edition and SKSE are covered by the CommonLibSSE-NG Modding
+Exception above and are not distributed with this mod.
+
+---
+
 ## License summary
 
 | Component | License | Linked into DLL |
@@ -466,6 +559,7 @@ turned on.
 | lodepng | zlib | yes, when found |
 | libpng, zlib | libpng / zlib | yes, when found |
 | rapidcsv | BSD-3-Clause | transitively, via CommonLibSSE-NG |
+| hde64 (MinHook v1.3.4) | BSD-2-Clause | yes, via CommonLibSSE-NG (`SKSE_SUPPORT_PATCH_SAFETY`) |
 | simpleini, toml11 | MIT | no (REX helpers disabled) |
 | xbyak | BSD-3-Clause | no (disabled) |
 | OpenVR | BSD-3-Clause | no (VR disabled) |

@@ -1,0 +1,810 @@
+[size=6][b]PrintScreen V4  -  Technical Reference[/b][/size]
+
+[b]Version:[/b] 4.0.0  
+[b]Author:[/b] William G Lea  
+[b]SKSE Plugin for Skyrim Special Edition[/b]  
+[b]Platform:[/b] Windows 10/11, DirectX 11
+
+[line]
+[size=5][b]Table of Contents[/b][/size]
+
+[list=1]
+[*][url=#architecture-overview]Architecture Overview[/url]
+[*][url=#ini-parameter-reference]INI Parameter Reference[/url]
+[*][url=#source-code-organization]Source Code Organization[/url]
+[*][url=#capture-pipeline]Capture Pipeline[/url]
+[*][url=#encoding-subsystems]Encoding Subsystems[/url]
+[*][url=#video-capture-h264mp4]Video Capture (H.264/MP4)[/url]
+[*][url=#ui-controller]UI Controller[/url]
+[*][url=#papyrus-integration]Papyrus Integration[/url]
+[*][url=#configuration-system]Configuration System[/url]
+[*][url=#logging-system]Logging System[/url]
+[*][url=#threading-model]Threading Model[/url]
+[*][url=#build-system]Build System[/url]
+[*][url=#known-issues--limitations]Known Issues & Limitations[/url]
+[/list]
+[line]
+[size=5][b]Architecture Overview[/b][/size]
+
+PrintScreen V4 is a zero-integration SKSE plugin. It does [b]not[/b] hook the game's renderer or intercept swap chains. Instead, it uses the Windows [b]Desktop Duplication API[/b] ([font=Courier New]IDXGIOutputDuplication[/font]) to capture frames directly from the display output.
+
+[size=4][b]Design Philosophy[/b][/size]
+
+[list]
+[*][b]No game integration:[/b] Works regardless of rendering API, ENB, ReShade, or overlay
+[*][b]GPU-first:[/b] D3D11 textures flow through GPU paths where possible (video encoding, scaling)
+[*][b]Async worker thread:[/b] Capture runs on a dedicated thread so the game thread is never blocked
+[*][b]Cooperative cancellation:[/b] Long-running operations (GIF encoding, video capture) check a cancellation token
+[/list]
+[size=4][b]Data Flow[/b][/size]
+
+[code]Desktop Duplication API
+        |
+        v
++-----------------+
+|  FrameAcquirer  |  <- Owns D3D11 device + DXGI duplication
+|   (src/capture) |
++--------+--------+
+         | ID3D11Texture2D (GPU texture)
+         v
++-----------------+     +------------------+
+|   GPUScaler     |     |   VideoCapture   |
+| (GPU downscale) |     |  (H.264 encoder) |
++--------+--------+     +------------------+
+         |
+         v (optional)
++-----------------+
+| ScratchImage    |  <- CPU staging copy (stills, GIF, APNG)
+| (DirectXTex)    |
++--------+--------+
+         |
+    +----+----+--------+--------+
+    v         v        v        v
+ StillEncoder GifEncoder ApngEncoder
+ (PNG/JPEG/   (GIF)    (APNG)
+  BMP/TIFF/
+  DDS)
+[/code]
+
+[line]
+[size=5][b]INI Parameter Reference[/b][/size]
+
+[size=4][b]File Locations[/b][/size]
+
+| Variant | Path |
+|---------|------|
+| [b]Current[/b] | [font=Courier New]%USERPROFILE%\Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini[/font] |
+| [b]Legacy (V2)[/b] | [font=Courier New]%USERPROFILE%\Documents\My Games\Skyrim Special Edition\SKSE\Plugins\Printscreen_Log.ini[/font] |
+
+If the legacy file exists, it is read for backward compatibility. Otherwise, the current path is used.
+
+[size=4][b]Section: [font=Courier New][Logging][/font][/b][/size]
+
+| Parameter | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| [font=Courier New]LogLevel[/font] | string/int | [font=Courier New]3[/font] ([font=Courier New]INFO[/font]) | [font=Courier New]0[/font]-[font=Courier New]5[/font] or [font=Courier New]NONE[/font]/[font=Courier New]ERROR[/font]/[font=Courier New]WARN[/font]/[font=Courier New]INFO[/font]/[font=Courier New]DEBUG[/font]/[font=Courier New]TRACE[/font] | Verbosity of log output |
+| [font=Courier New]ConsoleOutput[/font] | bool | [font=Courier New]true[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Also print to in-game console |
+| [font=Courier New]FileOutput[/font] | bool | [font=Courier New]true[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Write to [font=Courier New]printscreen.log[/font] |
+| [font=Courier New]ShowTimestamps[/font] | bool | [font=Courier New]true[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Prefix log lines with timestamps |
+| [font=Courier New]MaxLogFileSizeMB[/font] | uint32 | [font=Courier New]8[/font] | [font=Courier New]1[/font]-[font=Courier New]50[/font] | Log rotation threshold |
+
+[size=3][b]LogLevel Mapping[/b][/size]
+
+[code]0 -> "NONE"   -> spdlog::level::off
+1 -> "ERROR"  -> spdlog::level::err
+2 -> "WARN"   -> spdlog::level::warn
+3 -> "INFO"   -> spdlog::level::info   (default)
+4 -> "DEBUG"  -> spdlog::level::debug
+5 -> "TRACE"  -> spdlog::level::trace
+[/code]
+
+Any unrecognized string falls back to [font=Courier New]INFO[/font] (3).
+
+[size=3][b]Backward-Compatible Legacy Keys[/b][/size]
+
+The parser also accepts flat (unsectioned) legacy keys for V2 configs:
+
+| Legacy Key | Maps To | Section |
+|-----------|---------|---------|
+| [font=Courier New]Level[/font] | [font=Courier New]LogLevel[/font] | [font=Courier New][Logging][/font] |
+| [font=Courier New]File[/font] | [font=Courier New]FileOutput[/font] | [font=Courier New][Logging][/font] |
+| [font=Courier New]Console[/font] | [font=Courier New]ConsoleOutput[/font] | [font=Courier New][Logging][/font] |
+| [font=Courier New]Timestamps[/font] | [font=Courier New]ShowTimestamps[/font] | [font=Courier New][Logging][/font] |
+| [font=Courier New]LogPath[/font] | [url=unused]i[/url][/i] |  -  |
+
+[size=4][b]Section: [font=Courier New][Performance][/font][/b][/size]
+
+| Parameter | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| [font=Courier New]ParallelCompression[/font] | bool | [font=Courier New]true[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Multi-threaded PNG/APNG compression |
+| [font=Courier New]CompressionThreads[/font] | uint32 | [font=Courier New]0[/font] | [font=Courier New]0[/font]-[font=Courier New]16[/font] | Thread count ([font=Courier New]0[/font] = auto = CPU core count) |
+
+[size=4][b]Section: [font=Courier New][Capture][/font][/b][/size]
+
+| Parameter | Type | Default | Range | Description |
+|-----------|------|---------|-------|-------------|
+| [font=Courier New]LogCaptureProgress[/font] | bool | [font=Courier New]false[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Log per-frame progress during capture |
+| [font=Courier New]LogTimingInfo[/font] | bool | [font=Courier New]false[/font] | [font=Courier New]true[/font]/[font=Courier New]false[/font] | Log operation timing (benchmarking) |
+
+[size=4][b]Valid Key Registry[/b][/size]
+
+The config parser maintains a whitelist. Unknown keys trigger warnings:
+
+[code]// Sectioned format keys
+L"loglevel", L"consoleoutput", L"fileoutput", L"showtimestamps", L"maxlogfilesizemb"
+L"parallelcompression", L"compressionthreads"
+L"logcaptureprogress", L"logtiminginfo"
+
+// Legacy flat format keys
+L"level", L"file", L"console", L"timestamps", L"logpath"
+[/code]
+
+[size=4][b]INI Validation[/b][/size]
+
+[font=Courier New]Config::Initialize()[/font] performs key validation by:
+[list=1]
+[*]Opening the INI file directly (not via Win32 APIs)
+[*]Stripping comments ([font=Courier New];[/font] and [font=Courier New]#[/font])
+[*]Parsing [font=Courier New]key=value[/font] pairs
+[*]Checking each key against the whitelist
+[*]Storing unknown keys in [font=Courier New]g_unknownKeys[/font] for logging
+[/list]
+[line]
+[size=5][b]Source Code Organization[/b][/size]
+
+[code]PrintscreenV4/
++-- CMakeLists.txt              # Root: SKSE dependency, vcpkg
++-- src/
+|   +-- CMakeLists.txt          # Main: all targets, PCH, link libs
+|   +-- pch.h                   # Precompiled header (spdlog, fmt, Windows)
+|   +-- plugin.cpp              # SKSE entry points (Load, Query, Version)
+|   +-- Config.h / config.cpp   # INI parsing, Settings struct
+|   +-- logger.h / logger.cpp   # spdlog wrapper, SetupLog()
+|   +-- logger_shim.hpp         # UTF-8 conversion helpers
+|   +-- stringutils.h           # wstring<->utf8 converters
+|   +-- ConsoleCommandQueue.cpp/h  # Thread-safe console command queue
+|   +-- ScreenCapture.cpp/h     # Legacy stub (replaced by capture/)
+|   +-- cancel.h                # Cooperative cancellation macro
+|   +-- VideoCapture.cpp/h      # Media Foundation H.264 encoder
+|   +-- capture/
+|   |   +-- CaptureSession.cpp/h     # Worker thread orchestrator
+|   |   +-- CaptureRequest.cpp/h     # Request struct + format parsing
+|   |   +-- FrameAcquirer.cpp/h      # DXGI Desktop Duplication wrapper
+|   |   +-- FrameQueue.cpp/h         # Thread-safe frame buffer queue
+|   |   +-- GPUScaler.cpp/h          # D3D11 bilinear downscaler
+|   |   +-- CancellationToken.cpp/h  # Cooperative cancellation
+|   +-- encoding/
+|   |   +-- IEncoder.h               # Abstract encoder interface
+|   |   +-- StillEncoder.cpp/h       # PNG/JPEG/BMP/TIFF/DDS
+|   |   +-- GifEncoder.cpp/h         # Animated GIF (GIF89a)
+|   |   +-- ApngEncoder.cpp/h        # Animated PNG
+|   +-- papyrus/
+|   |   +-- Bindings.h               # Papyrus registration stubs
+|   +-- ui/
+|       +-- UIController.cpp/h       # UI hide/show (showMenus)
+|       +-- MenuEventSink.cpp/h      # Menu open/close event listener
++-- PrintScreenV4_VideoCapture_DesignNotes.md
+[/code]
+
+[line]
+[size=5][b]Capture Pipeline[/b][/size]
+
+[size=4][b]1. CaptureSession (Orchestrator)[/b][/size]
+
+[code]class CaptureSession {
+public:
+    enum class StartResult {
+        Accepted,        // Capture started
+        AlreadyRunning,  // Worker thread busy
+        InvalidState,    // Unexpected state machine state
+        BusyCancelled    // Previous capture cancelled, ready for retry
+    };
+
+    StartResult Start(CaptureRequest request,
+                      CompletionCallback onComplete,
+                      AcquisitionCallback onAcquisitionComplete);
+    void RequestCancel();
+    std::string GetResult();  // Papyrus polling: "Ready", "Starting", "Running", "CALLBACK_SUCCESS", ...
+};
+[/code]
+
+[b]State Machine:[/b]
+
+[code]Idle -> Starting -> Running -> Done -> (consumed) -> Idle
+         |           |
+         +-----------+ (RequestCancel -> CALLBACK_CANCELLED)
+[/code]
+
+[size=4][b]2. FrameAcquirer (Desktop Duplication)[/b][/size]
+
+[code]class FrameAcquirer {
+    HRESULT Initialize();                          // Create D3D11 device + IDXGIOutputDuplication
+    HRESULT AcquireFrame(DirectX::ScratchImage& out);       // CPU path
+    HRESULT AcquireFrameGPU(ID3D11Texture2D*& out, uint32_t& w, uint32_t& h);  // GPU path
+};
+[/code]
+
+[b]Critical:[/b] The D3D11 device [b]must[/b] be created with [font=Courier New]D3D11_CREATE_DEVICE_VIDEO_SUPPORT[/font] for hardware video encoding to work. Without this flag, Media Foundation hardware MFTs silently refuse to bind.
+
+[size=4][b]3. GPUScaler (Resolution Scaling)[/b][/size]
+
+Implements bilinear downscaling via a fullscreen render quad:
+[list]
+[*]No vertex buffer (generates quad from [font=Courier New]SV_VertexID[/font])
+[*]Letterbox-preserving aspect ratio scaling
+[*]Output: [font=Courier New]DXGI_FORMAT_B8G8R8A8_UNORM[/font] with [font=Courier New]D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET[/font]
+[*]Shaders compiled at runtime via [font=Courier New]D3DCompile[/font] (no external [font=Courier New].cso[/font] files)
+[/list]
+[size=4][b]4. CaptureRequest (Parameter Struct)[/b][/size]
+
+[code]struct CaptureRequest {
+    std::wstring outputDir;
+    ImageFormat  format = ImageFormat::PNG;
+    float        jpegQuality = 95.0f;
+    TiffMode     tiffMode = TiffMode::NONE;
+    DDSMode      ddsMode = DDSMode::BC1;
+
+    // Animated formats
+    float animDuration = 3.0f;   // seconds
+    float animFPS = 10.0f;       // frames/sec
+    int   loopCount = 0;         // 0 = infinite
+    int   deltaMode = 0;         // 0=region, 1=true delta
+    int   optimize = 0;          // 0=off, 1=on
+
+    // Video capture (H.264)
+    float videoDuration = 10.0f;      // 1-120s
+    int   targetResolution = 0;       // 0=Native, 1=720p, 2=1080p, 3=1440p, 4=4K
+    int   videoFrameRate = 30;        // 30 or 60
+    int   qualityPreset = 2;          // 0=Low, 1=Medium, 2=High, 3=VeryHigh, 4=Custom
+    int   videoBitrateKbps = 8000;    // kbps (Custom only)
+    float keyframeIntervalSec = 2.0f; // seconds
+    int   encoderPreference = 0;      // 0=Auto, 1=PreferHW, 2=ForceSW
+    int   rateControl = 1;            // 0=CBR, 1=VBR, 2=CQP
+    int   videoContainer = 0;         // 0=MP4
+
+    bool autoUI = true;               // Auto-hide/show UI via showMenus
+};
+[/code]
+
+[size=4][b]Resolution Mapping ([font=Courier New]targetResolution[/font])[/b][/size]
+
+| Value | Name | Dimensions (typical) |
+|-------|------|----------------------|
+| [font=Courier New]0[/font] | Native | Desktop resolution (no scaling) |
+| [font=Courier New]1[/font] | 720p | 1280x720 |
+| [font=Courier New]2[/font] | 1080p | 1920x1080 |
+| [font=Courier New]3[/font] | 1440p | 2560x1440 |
+| [font=Courier New]4[/font] | 4K | 3840x2160 |
+
+Actual output is computed by [font=Courier New]ResolveTargetResolution()[/font] which preserves aspect ratio via letterboxing.
+
+[line]
+[size=5][b]Encoding Subsystems[/b][/size]
+
+[size=4][b]IEncoder Interface[/b][/size]
+
+[code]class IEncoder {
+public:
+    virtual EncodeResult Encode(
+        const DirectX::ScratchImage& frame,
+        const std::wstring& outputPath,
+        CancellationToken::Ptr token) = 0;
+
+    virtual EncodeResult EncodeSequence(
+        std::vector<DirectX::ScratchImage>& frames,
+        const std::wstring& outputPath,
+        float fps, int loopCount, int deltaMode,
+        CancellationToken::Ptr token) = 0;
+};
+[/code]
+
+[size=4][b]StillEncoder[/b][/size]
+
+Supports: PNG, JPEG, BMP, TIFF, DDS
+
+| Format | Library/Method | Notes |
+|--------|---------------|-------|
+| PNG | DirectXTex [font=Courier New]SaveToWICFile[/font] | WIC encoder, parallel option |
+| JPEG | DirectXTex [font=Courier New]SaveToWICFile[/font] | Quality 1-100 via WIC property |
+| BMP | DirectXTex [font=Courier New]SaveToWICFile[/font] | Uncompressed RGBA |
+| TIFF | DirectXTex [font=Courier New]SaveToWICFile[/font] | Compression via [font=Courier New]WICBitmapEncoder[/font] property |
+| DDS | DirectXTex [font=Courier New]SaveToDDSFile[/font] | BC1-BC7 compression modes |
+
+[size=4][b]GifEncoder[/b][/size]
+
+Custom GIF89a writer with:
+[list]
+[*]LZW compression
+[*]Color quantization (8-bit palette)
+[*]Frame differencing (delta mode)
+[*]Region extraction optimization
+[*]Loop count support
+[/list]
+[size=4][b]ApngEncoder[/b][/size]
+
+Custom APNG encoder:
+[list]
+[*]PNG-compliant per-frame compression
+[*][font=Courier New]fcTL[/font]/[font=Courier New]fdAT[/font] chunk sequencing
+[*]Optional per-frame region optimization
+[/list]
+[line]
+[size=5][b]Video Capture (H.264/MP4)[/b][/size]
+
+[size=4][b]Architecture: Media Foundation SinkWriter[/b][/size]
+
+[code]namespace Printscreen {
+    class VideoCapture {
+        bool Initialize(ID3D11Device*, const VideoCaptureConfig&);
+        bool EncodeFrame(ID3D11Texture2D*, uint64_t frameIndex);
+        bool EncodeFrame(ID3D11Texture2D*, uint64_t frameIndex,
+                           LONGLONG sampleTimeHns, LONGLONG sampleDurationHns);
+        bool Finalize();   // Flush moov atom, close file
+        void Abort();      // Discard partial file
+    };
+}
+[/code]
+
+[size=4][b]VideoCaptureConfig[/b][/size]
+
+[code]struct VideoCaptureConfig {
+    uint32_t width = 1920;
+    uint32_t height = 1080;
+    uint32_t frameRate = 60;
+    uint32_t bitrateKbps = 16000;
+    uint32_t qualityCqp = 70;           // Only for CQP mode
+    uint32_t keyframeIntervalSec = 2;
+    EncoderPreference encoderPreference = EncoderPreference::Auto;
+    RateControlMode   rateControl       = RateControlMode::VBR;
+    VideoContainer    container         = VideoContainer::MP4;
+    std::filesystem::path outputPath;
+};
+[/code]
+
+[size=4][b]Encoder Selection (Media Foundation)[/b][/size]
+
+| Preference | Behavior |
+|-----------|----------|
+| [font=Courier New]Auto[/font] | MF chooses: hardware if available, else software |
+| [font=Courier New]PreferHardware[/font] | Requires hardware MFT; [font=Courier New]Initialize()[/font] fails if none |
+| [font=Courier New]ForceSoftware[/font] | Sets [font=Courier New]MF_READWRITE_DISABLE_HARDWARE_TRANSFORMS[/font] |
+
+Hardware encoder selection is automatic:
+[list]
+[*][b]NVIDIA:[/b] NVENC via [font=Courier New]MFVideoFormat_H264[/font] MFT
+[*][b]AMD:[/b] AMF via [font=Courier New]MFVideoFormat_H264[/font] MFT
+[*][b]Intel:[/b] QuickSync via [font=Courier New]MFVideoFormat_H264[/font] MFT
+[/list]
+[size=4][b]Rate Control Mapping[/b][/size]
+
+[code]UINT32 EncoderRateControlConstant(RateControlMode mode) {
+    switch (mode) {
+        case CBR: return eAVEncCommonRateControlMode_CBR;
+        case VBR: return eAVEncCommonRateControlMode_UnconstrainedVBR;
+        case CQP: return eAVEncCommonRateControlMode_Quality;
+    }
+}
+[/code]
+
+Passed to encoder via [font=Courier New]CODECAPI_AVEncCommonRateControlMode[/font].
+
+[size=4][b]Timestamp Math[/b][/size]
+
+To minimize accumulated rounding error over long captures:
+
+[code]// Correct (minimizes drift):
+LONGLONG timeHns = (frameIndex * kHnsPerSecond) / fps;
+
+// Incorrect (accumulates rounding error):
+// LONGLONG timeHns = frameIndex * (kHnsPerSecond / fps);
+[/code]
+
+Where [font=Courier New]kHnsPerSecond = 10'000'000LL[/font] (100-nanosecond units).
+
+[size=4][b]Thread Safety[/b][/size]
+
+[list]
+[*][font=Courier New]Initialize()[/font], [font=Courier New]EncodeFrame()[/font], [font=Courier New]Finalize()[/font] must all be called from the [b]same thread[/b] (the CaptureSession worker thread)
+[*]D3D11 multithread protection is [b]enforced[/b] in [font=Courier New]Initialize()[/font]:
+[/list]  [code]  ComPtr<ID3D10Multithread> mt;
+  device->QueryInterface(IID_PPV_ARGS(&mt));
+  mt->SetMultithreadProtected(TRUE);
+  [/code]
+
+[size=4][b]Streaming vs Buffered[/b][/size]
+
+Unlike GIF/APNG (which buffer all frames in memory then encode), VideoCapture:
+[list=1]
+[*]Encodes each frame immediately via [font=Courier New]IMFSinkWriter::WriteSample()[/font]
+[*]Streams to disk  -  no full in-memory frame buffer
+[*]Memory usage is constant regardless of duration
+[/list]
+[size=4][b]MKV Status[/b][/size]
+
+The [font=Courier New]VideoContainer::MKV[/font] enum exists but falls back to MP4 with a log warning. Media Foundation's built-in sink writer does not support Matroska. Future versions may add FFmpeg integration (LGPL considerations apply).
+
+[line]
+[size=5][b]UI Controller[/b][/size]
+
+[size=4][b]Primary Mechanism: [font=Courier New]RE::UI::ShowMenus()[/font][/b][/size]
+
+The UI controller uses the same bool that the [font=Courier New]tm[/font] console command toggles:
+
+[code]bool UIController::HideAll() {
+    auto* ui = RE::UI::GetSingleton();
+    savedShowMenus_ = ui->IsShowingMenus();
+    ui->ShowMenus(false);   // Single bool write, thread-safe
+    hidden_ = true;
+}
+
+bool UIController::RestoreAll() {
+    auto* ui = RE::UI::GetSingleton();
+    ui->ShowMenus(savedShowMenus_);  // Restore previous state
+    hidden_ = false;
+}
+[/code]
+
+[b]Thread safety:[/b] [font=Courier New]ShowMenus(bool)[/font] is a plain bool write checked early in the engine render loop. It is safe to call from the capture worker thread without SKSE task marshalling.
+
+[size=4][b]Granular Scaleform Helpers (Deprecated)[/b][/size]
+
+The class retains per-element visibility helpers for selective UI hiding:
+[list]
+[*][font=Courier New]SetHUDAlpha()[/font], [font=Courier New]HideHUD()[/font], [font=Courier New]ShowHUD()[/font]
+[*][font=Courier New]SetSubtitlesVisible()[/font], [font=Courier New]SetNPCNamesVisible()[/font], etc.
+[/list]
+[b]These require game-thread execution[/b] (via [font=Courier New]SKSE::GetTaskInterface()->AddTask()[/font]) because GFx is not thread-safe.
+
+[size=4][b]Async Wrappers[/b][/size]
+
+[code]void UIController::HideAllAsync()    { HideAll(); }    // Inline, thread-safe
+void UIController::RestoreAllAsync()   { RestoreAll(); } // Inline, thread-safe
+[/code]
+
+Kept for API consistency when called from worker threads.
+
+[line]
+[size=5][b]Papyrus Integration[/b][/size]
+
+[size=4][b]Registration[/b][/size]
+
+[code]// plugin.cpp
+auto* papyrus = SKSE::GetPapyrusInterface();
+papyrus->Register(PapyrusBindings::Register);
+[/code]
+
+[size=4][b]Lifecycle Hooks[/b][/size]
+
+[code]// Messaging interface listener
+messaging->RegisterListener([](SKSE::MessagingInterface::Message* msg) {
+    switch (msg->type) {
+        case kDataLoaded:
+            PapyrusBindings::OnDataLoaded();      // Mod config loaded
+            break;
+        case kPostLoadGame:
+        case kNewGame:
+            PapyrusBindings::OnPostLoadGame();    // Reset session state
+            break;
+    }
+});
+[/code]
+
+[size=4][b]Script Dependencies[/b][/size]
+
+| Dependency | Purpose | Nexus ID |
+|-----------|---------|----------|
+| [b]PapyrusUtil SE[/b] | JsonUtil, StorageUtil | [url=https://www.nexusmods.com/skyrimspecialedition/mods/13048]13048[/url] |
+| [b]JContainers SE[/b] | JIntMap, JArray | [url=https://www.nexusmods.com/skyrimspecialedition/mods/16495]16495[/url] |
+| [b]SkyUI[/b] | SKI_ConfigBase, MCM | Built-in |
+
+[size=4][b]Compilation Status[/b][/size]
+
+As of last check, all Papyrus scripts require the extended SKSE compiler flags (for [font=Courier New]Hidden[/font] property/script flags) and the above dependencies. The scripts do not compile with the base game compiler alone.
+
+[size=4][b]Papyrus API Functions[/b][/size]
+
+The plugin exposes these functions to Papyrus (exact signatures in [font=Courier New]papyrus/Bindings.h[/font]):
+
+[list]
+[*][b]Capture functions[/b]  -  Trigger screenshots/video with parameters
+[*][b]Config reload[/b]  -  [font=Courier New]ReloadConfig()[/font] to re-read INI without restart
+[*][b]Status polling[/b]  -  Check capture progress via [font=Courier New]GetResult()[/font]
+[*][b]UI control[/b]  -  Hide/restore UI elements
+[/list]
+[line]
+[size=5][b]Configuration System[/b][/size]
+
+[size=4][b]Settings Struct[/b][/size]
+
+[code]namespace Config {
+    struct Settings {
+        std::wstring iniPath;       // Path to loaded INI
+        int      logLevel = 3;      // 0..5
+        bool     consoleOutput = true;
+        bool     fileOutput = true;
+        bool     showTimestamps = true;
+        uint32_t maxLogFileSizeMB = 8;
+        bool     parallelCompression = true;
+        uint32_t compressionThreads = 0;  // 0 = auto
+        bool     logCaptureProgress = false;
+        bool     logTimingInfo = false;
+        DDSMode  ddsMode = DDSMode::BC7;  // Only used by legacy path
+    };
+    extern Settings g_settings;
+}
+[/code]
+
+[size=4][b]Initialization Flow[/b][/size]
+
+[code]SKSEPlugin_Load()
+    +-- Config::Initialize()
+        +-- Check legacy path first (backward compat)
+        +-- Check current path
+        +-- Validate INI keys -> g_unknownKeys
+        +-- Parse sectioned format [Logging]/[Performance]/[Capture]
+        +-- If sectioned missing, parse legacy flat format
+[/code]
+
+[size=4][b]Runtime Access[/b][/size]
+
+[code]const Config::Settings& s = Config::Get();
+int level = s.GetLogLevel();        // Convenience accessor
+bool console = s.IsConsoleOutputEnabled();
+[/code]
+
+[line]
+[size=5][b]Logging System[/b][/size]
+
+[size=4][b]Implementation[/b][/size]
+
+Uses [b]spdlog[/b] with fmt-style formatting:
+
+[code]// logger.h
+namespace logger {
+    void SetupLog();   // One-time init
+    void SetLevel(spdlog::level::level_enum level);
+
+    template<class... Args>
+    void info(fmt::format_string<Args...> fmt, Args&&... args) {
+        spdlog::info(fmt, std::forward<Args>(args)...);
+    }
+    // ... trace, debug, warn, error, critical
+}
+[/code]
+
+[size=4][b]Log File[/b][/size]
+
+[code]%USERPROFILE%\Documents\My Games\Skyrim Special Edition\SKSE\printscreen.log
+[/code]
+
+[list]
+[*]Overwritten on each game start
+[*]Rotated when size exceeds [font=Courier New]MaxLogFileSizeMB[/font]
+[*]Old file renamed to [font=Courier New]printscreen.log.old[/font]
+[/list]
+[size=4][b]UTF-8 Support[/b][/size]
+
+[font=Courier New]logger_shim.hpp[/font] provides [font=Courier New]logger::u8()[/font] wrappers for strings that may contain non-ASCII characters (paths with Unicode, etc.).
+
+[line]
+[size=5][b]Threading Model[/b][/size]
+
+[size=4][b]Worker Thread (Capture)[/b][/size]
+
+[code]// CaptureSession::Start() spawns:
+std::thread workerThread_([this, req]() {
+    WorkerThread(req);
+});
+[/code]
+
+The worker thread:
+[list=1]
+[*]Acquires frames from Desktop Duplication
+[*]Runs encoding (CPU-bound for stills/GIF/APNG, GPU-bound for video)
+[*]Calls completion callback
+[*]Sets result state for Papyrus polling
+[/list]
+[size=4][b]Cancellation Token[/b][/size]
+
+[code]class CancellationToken : public std::enable_shared_from_this<CancellationToken> {
+public:
+    void RequestCancel();
+    bool IsCancelled() const;
+    void ThrowIfCancelled(const char* context);  // Throws Cancelled exception
+};
+[/code]
+
+Long-running operations periodically check the token. Frame acquirer checks before each [font=Courier New]AcquireNextFrame()[/font] call.
+
+[size=4][b]Main Thread Safety[/b][/size]
+
+| Component | Thread | Notes |
+|-----------|--------|-------|
+| [font=Courier New]CaptureSession::Start()[/font] | Any | Spawns worker, returns immediately |
+| [font=Courier New]CaptureSession::GetResult()[/font] | Any (Papyrus) | Poll from game thread |
+| [font=Courier New]UIController::HideAll()[/font] | Any | Bool write is atomic |
+| [font=Courier New]UIController::SetHUDAlpha()[/font] | Game only | GFx requires main thread |
+| [font=Courier New]VideoCapture::EncodeFrame()[/font] | Worker only | Same thread as Initialize() |
+| [font=Courier New]FrameAcquirer::AcquireFrame()[/font] | Worker | DXGI is thread-safe |
+
+[size=4][b]Thread Synchronization[/b][/size]
+
+[list]
+[*][font=Courier New]CaptureSession[/font] uses [font=Courier New]std::mutex[/font] for state machine transitions
+[*][font=Courier New]FrameQueue[/font] uses [font=Courier New]std::mutex + std::condition_variable[/font] for producer/consumer
+[*][font=Courier New]ConsoleCommandQueue[/font] uses [font=Courier New]std::mutex + std::deque[/font] for thread-safe command enqueue/dequeue
+[/list]
+[line]
+[size=5][b]Build System[/b][/size]
+
+[size=4][b]CMake Configuration[/b][/size]
+
+[code]# Key dependencies
+target_link_libraries(Printscreen PRIVATE
+    CommonLibSSE::CommonLibSSE
+    d3d11.lib d3dcompiler.lib dxgi.lib
+    mfplat.lib mf.lib mfreadwrite.lib mfuuid.lib strmiids.lib
+)
+[/code]
+
+[size=4][b]Required Libraries[/b][/size]
+
+| Library | Source | Purpose |
+|---------|--------|---------|
+| [b]CommonLibSSE[/b] | GitHub / vcpkg | SKSE abstraction layer |
+| [b]DirectXTex[/b] | vcpkg | Image I/O, texture utilities |
+| [b]spdlog[/b] | vcpkg | Logging |
+| [b]fmt[/b] | vcpkg (spdlog dep) | String formatting |
+
+[size=4][b]Windows SDK Components[/b][/size]
+
+[list]
+[*][font=Courier New]mfplat[/font], [font=Courier New]mf[/font], [font=Courier New]mfreadwrite[/font]  -  Media Foundation
+[*][font=Courier New]mfuuid[/font], [font=Courier New]strmiids[/font]  -  MF GUIDs
+[*][font=Courier New]d3d11[/font], [font=Courier New]d3dcompiler[/font]  -  Direct3D 11 + runtime shader compilation
+[*][font=Courier New]dxgi[/font]  -  Desktop Duplication API
+[/list]
+[size=4][b]Precompiled Header[/b][/size]
+
+[code]// pch.h
+#include <spdlog/spdlog.h>
+#include <fmt/format.h>
+#include <Windows.h>
+#include <filesystem>
+#include <math>
+#include <string>
+#include <vector>
+#include <atomic>
+#include <mutex>
+#include <thread>
+[/code]
+
+[size=4][b]vcpkg Manifest[/b][/size]
+
+No custom vcpkg ports required. All dependencies are in the main registry.
+
+[line]
+[size=5][b]Known Issues & Limitations[/b][/size]
+
+[size=4][b]Papyrus Script Compilation[/b][/size]
+
+All [font=Courier New].psc[/font] scripts currently fail to compile without:
+[list]
+[*]PapyrusUtil SE (JsonUtil, StorageUtil)
+[*]JContainers SE (JIntMap)
+[*]SKSE extended compiler flags ([font=Courier New]Hidden[/font] property support)
+[/list]
+[b]Status:[/b] Scripts may be shipped as pre-compiled [font=Courier New].pex[/font] files, or dependencies must be installed.
+
+[size=4][b]Video Capture Edge Cases[/b][/size]
+
+[list=1]
+[*][b]MKV container[/b]  -  Not implemented. Falls back to MP4 with warning.
+[*][b]CQP + Bitrate[/b]  -  Bitrate is ignored when [font=Courier New]rateControl=CQP[/font]. Quality value is used instead.
+[*][b]Hardware encoder unavailability[/b]  -  Falls back to software. May be slow at high resolutions.
+[*][b]Abrort without Finalize[/b]  -  MP4 file is unplayable (no [font=Courier New]moov[/font] atom). Use [font=Courier New]Abort()[/font] on game crash/force quit.
+[*][b]D3D11 video support flag[/b]  -  If the device was created without [font=Courier New]D3D11_CREATE_DEVICE_VIDEO_SUPPORT[/font], hardware encoding silently fails.
+[/list]
+[size=4][b]Resolution Scaling[/b][/size]
+
+[font=Courier New]GPUScaler[/font] uses bilinear filtering. For highest quality downscaling (e.g., 4K->1080p), Lanczos or bicubic would be better but require more complex shader code.
+
+[size=4][b]Memory Usage[/b][/size]
+
+[list]
+[*][b]Stills:[/b] One frame (~8MB for 1080p RGBA)
+[*][b]GIF/APNG:[/b] All frames buffered in memory before encoding
+[/list]15s @ 30fps @ 1080p = ~450 frames x ~8MB = [b]~3.6GB[/b] (sub-item)
+Duration clamped to 15s to prevent excessive memory use (sub-item)
+[list]
+[*][b]H.264:[/b] Constant memory  -  frames encoded and streamed to disk immediately
+[/list]
+[size=4][b]Desktop Duplication Limitations[/b][/size]
+
+[list]
+[*]Cannot capture content protected by HDCP/DRM
+[*]Captures the entire desktop, not just the game window (so multi-monitor setups capture all monitors unless cropped)
+[*]Requires Windows 8.1+ ( DXGI 1.2+)
+[/list]
+[size=4][b]UI Hiding[/b][/size]
+
+[list]
+[*]Uses [font=Courier New]RE::UI::ShowMenus(bool)[/font]  -  same as [font=Courier New]tm[/font] console command
+[*]Hides [b]all[/b] UI: HUD, compass, crosshair, quest markers, mod HUDs, menus
+[*]Cannot selectively hide individual elements without Scaleform API (which requires game-thread execution)
+[/list]
+[line]
+[size=5][b]API Quick Reference[/b][/size]
+
+[size=4][b]Config Access[/b][/size]
+
+[code]#include "Config.h"
+Config::Initialize();                    // Load INI
+const auto& s = Config::Get();
+int level = s.logLevel;                  // 0-5
+bool parallel = s.parallelCompression;   // true/false
+[/code]
+
+[size=4][b]Logger[/b][/size]
+
+[code]#include "logger.h"
+logger::info("Format string with {} args", 42);
+logger::error("Failed to open {}", path);
+logger::SetupLog();  // Call once after Config::Initialize()
+[/code]
+
+[size=4][b]Capture Session[/b][/size]
+
+[code]#include "capture/CaptureSession.h"
+auto& session = CaptureSession::GetSingleton();
+
+CaptureRequest req;
+req.outputDir = L"C:/Screenshots";
+req.format = ImageFormat::PNG;
+req.autoUI = true;
+
+auto result = session.Start(req,
+    [](const std::string& msg){ /* on complete */ },
+    [](){ /* after acquisition, before encoding  -  restore UI here */ }
+);
+[/code]
+
+[size=4][b]Video Capture[/b][/size]
+
+[code]#include "VideoCapture.h"
+Printscreen::VideoCapture vc;
+Printscreen::VideoCaptureConfig cfg;
+cfg.width = 1920; cfg.height = 1080;
+cfg.frameRate = 60;
+cfg.bitrateKbps = 16000;
+cfg.outputPath = "C:/Videos/capture.mp4";
+
+vc.Initialize(device, cfg);
+vc.EncodeFrame(texture, frameIndex, timeHns, durationHns);
+vc.Finalize();  // Must call for playable MP4
+[/code]
+
+[line]
+[size=5][b]Change Log[/b][/size]
+
+[size=4][b]V4.0.0 (Current)[/b][/size]
+
+[list]
+[*]Complete refactor from V3 architecture
+[*]Desktop Duplication API replaces game hooks
+[*]Modular encoder system (Still/GIF/APNG/H264)
+[*]GPU-accelerated video encoding via Media Foundation
+[*]Cooperative cancellation throughout
+[*]Sectioned INI format with legacy fallback
+[*]spdlog-based logging with rotation
+[/list]
+[size=4][b]V3 (Legacy)[/b][/size]
+
+[list]
+[*]Game-renderer hooking approach
+[*]Simpler format support (PNG/JPG/BMP)
+[*]No video encoding
+[/list]
+[line]
+[i]Last updated: 2026-06-03[/i]  
+[i]For end-user documentation, see [url=PrintScreenV4_UserGuide.md]PrintScreen V4 User Guide[/url][/i]
