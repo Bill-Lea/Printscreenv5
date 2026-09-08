@@ -43,7 +43,7 @@ if (-not $OutDir) { $OutDir = Join-Path $RepoRoot "dist" }
 
 $SevenZip = Find-SevenZip
 $Version  = Get-ProjectVersion $RepoRoot
-$Commit   = (& git -C $RepoRoot rev-parse $Ref).Trim()
+$Commit   = (& git -C $RepoRoot rev-parse "$Ref^{commit}").Trim()
 $Dirty    = (& git -C $RepoRoot status --porcelain --untracked-files=no)
 if ($Dirty) {
     Write-Warning "Working tree has uncommitted changes. SOURCE.txt will record commit $Commit, which may not match the DLL you built."

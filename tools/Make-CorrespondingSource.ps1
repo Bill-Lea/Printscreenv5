@@ -49,7 +49,7 @@ if (-not $VcpkgDownloads) { $VcpkgDownloads = Join-Path $env:LOCALAPPDATA "vcpkg
 
 $SevenZip = Find-SevenZip
 $Version  = Get-ProjectVersion $RepoRoot
-$Commit   = (& git -C $RepoRoot rev-parse $Ref).Trim()
+$Commit   = (& git -C $RepoRoot rev-parse "$Ref^{commit}").Trim()
 if (& git -C $RepoRoot status --porcelain --untracked-files=no) {
     Write-Warning "Working tree has uncommitted changes; the bundle will contain commit $Commit as committed, not your working copy."
 }
