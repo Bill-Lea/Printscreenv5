@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(Printscreen VERSION 5.0.0 LANGUAGES CXX)
+project(Printscreen VERSION 5.0.1 LANGUAGES CXX)
 
 # -----------------------------------------------------------------------------
 # CommonLibSSE-NG 6.4.0
