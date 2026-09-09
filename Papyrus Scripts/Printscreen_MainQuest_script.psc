@@ -66,7 +66,10 @@ int    Property Shots = 0 Auto Hidden
 
 float _CaptureStartRealTime = 0.0
 float LastKeyPressTime = 0.0
-bool  _CompletionHandled = false
+; Sequence number of the capture we are waiting on (0 = none). TakePhoto
+; returns "Started:<seq>"; the PrintScreenComplete event echoes it back in
+; numArg so a late event from an earlier capture can be told apart and ignored.
+int   _CaptureSeq = 0
 
 ; ==============================================================================
 ; INITIALIZATION
@@ -85,10 +88,7 @@ Function InitializePrintscreen()
     UnregisterForKey(Key_TakePhoto)
     UnregisterForModEvent("PrintScreenComplete")
     ; reset stale capture state before re-registering
-    IsLatentScreenshotActive = false
-    IsStartingCapture = false
-    _CompletionHandled = false
-    _CaptureStartRealTime = 0.0
+    _ResetCaptureState()
     ; LastKeyPressTime is baked into the save, but GetCurrentRealTime() resets
     ; to 0 every game launch. A save from a long session makes the OnKeyUp
     ; debounce difference negative — swallowing every key press — until the
@@ -108,10 +108,7 @@ EndFunction
 
 Event OnPlayerLoadGame()
     ; Force-reset screenshot state on any load (death respawn, manual reload)
-    IsLatentScreenshotActive = false
-    IsStartingCapture = false
-    _CompletionHandled = false
-    _CaptureStartRealTime = 0.0
+    _ResetCaptureState()
     Result = "Ready"
     ; Re-initialize hotkey and event registration
     InitializePrintscreen()
@@ -622,7 +619,6 @@ Function CaptureImage(String basePath, String imgType, float jpgComp,  String ca
 
     IsLatentScreenshotActive = true
     _CaptureStartRealTime = Utility.GetCurrentRealTime()
-    _CompletionHandled = false
 
     ; -----------------------------------------------------------------------
     ; TakePhoto signature (V4): all image + video params always passed.
@@ -634,15 +630,25 @@ Function CaptureImage(String basePath, String imgType, float jpgComp,  String ca
     ; -----------------------------------------------------------------------
     String startResult = Printscreen_Formula_script.TakePhoto( basePath,  imageType,  jpg_Compression,  Mode,  Duration,  Fps, LoopCount,  DeltaMode, Optimize, Compression,  VideoDuration,  TargetResolution, VideoFrameRate,  QualityPreset,  VideoBitrate,  KeyframeInterval,  EncoderPreference,  RateControl, VideoContainer, AutoUI)
 
-    if (startResult == "Started")
-        ; Event-driven: no polling needed. PrintScreenComplete event will fire on completion.
-        return
-    elseif (startResult == "Already running")
-        Debug.Notification("Capture already in progress")
+    if (StringUtil.Find(startResult, "Started:") == 0)
+        ; Accepted. Remember which capture we are waiting on; the completion
+        ; event carries the same number. IsLatentScreenshotActive now holds
+        ; the busy state on its own.
+        _CaptureSeq = StringUtil.Substring(startResult, 8) as int
         IsStartingCapture = false
+        ; Watchdog: if the completion event is ever lost, OnUpdate clears the
+        ; stuck flags instead of leaving them for the next hotkey press.
+        RegisterForSingleUpdate(_WatchdogTimeout())
+        return
+    elseif (startResult == "Previous capture cancelled")
+        ; The plugin still had a worker running (our flags had been cleared
+        ; without it finishing) and cancelled it instead of starting a new one.
+        ; Its completion event will carry the old sequence and be ignored.
+        Debug.Notification("Previous capture cancelled")
+        _ResetCaptureState()
         return
     else
-        Debug.Notification("Capture failed: " + startResult)
+        ; "Error: ..." — one notification, via the common completion path.
         OnScreenshotCompleted(startResult)
         return
     endif
@@ -654,27 +660,18 @@ EndFunction
 
 Function OnScreenshotCompleted(String completionResult)
     Debug.Trace("PrintScreen: Completed — " + completionResult)
+    Result = completionResult
+    _ResetCaptureState()
 
-    ; Always ensure state is cleaned up even if called multiple times
-    IsLatentScreenshotActive = false
-    IsStartingCapture = false
-    _CaptureStartRealTime = 0.0
-
-    if (StringUtil.Find(completionResult, "Success") >= 0)
+    if (completionResult == "Success")
         Shots += 1
         Debug.Notification("Screenshot saved! Total: " + Shots)
-    elseif (StringUtil.Find(completionResult, "Cancel") >= 0)
+    elseif (completionResult == "Cancelled")
         Debug.Notification("Capture cancelled")
     else
         Debug.Notification("Capture: " + completionResult)
     endif
 
-    IsLatentScreenshotActive = false
-    IsStartingCapture = false
-    _CaptureStartRealTime = 0.0
-
-    ; In event-driven mode, C++ callback handles all state cleanup.
-    ; No need to poll Get_Result — the event already delivered the final state.
     ; UI restore is handled by C++ when AutoUI=true (via callback)
 EndFunction
 
@@ -682,9 +679,55 @@ EndFunction
 ; EVENT HANDLERS — Pure event-driven, no polling
 ; ==============================================================================
 
+; Completion event from Bindings.cpp.
+;   numArg = sequence * 10 + status      status: 0=success, 1=cancelled, 2=error
+;   strArg = {"status":"...","seq":N,"message":"...","path":"..."}
+; The outcome is read from numArg only. strArg is consulted just for the
+; error text, so a path or message containing words like "Error" can never
+; change how the event is classified.
 Event OnPrintScreenComplete(string eventName, string strArg, float numArg, Form sender)
-    ; Legacy string format (backward compatible)
-    _HandleCompletionResult(strArg)
+    int code   = numArg as int
+    int status = code % 10
+    int seq    = code / 10
+
+    if (seq == 0 || seq != _CaptureSeq)
+        ; Late event from an earlier capture (cancelled from the hotkey, or
+        ; interrupted by a reload). That capture's state was already cleared;
+        ; touching the flags now would clobber the capture that replaced it.
+        Debug.Trace("PrintScreen: ignoring completion for capture #" + seq + " (waiting on #" + _CaptureSeq + "): " + strArg)
+        return
+    endif
+
+    if (status == 0)
+        OnScreenshotCompleted("Success")
+    elseif (status == 1)
+        OnScreenshotCompleted("Cancelled")
+    else
+        OnScreenshotCompleted(_ExtractMessage(strArg))
+    endif
+EndEvent
+
+; Watchdog. Armed by CaptureImage for the expected capture length plus a
+; margin; disarmed by _ResetCaptureState on every normal completion.
+Event OnUpdate()
+    if (!IsLatentScreenshotActive)
+        return
+    endif
+    float elapsed = Utility.GetCurrentRealTime() - _CaptureStartRealTime
+
+    ; Ask the plugin. A safe (non-forced) reset is refused while the worker
+    ; is still alive, which means the capture is genuinely still running
+    ; (slow BC7 or APNG encode) and we simply keep waiting. Any other answer
+    ; means the session is idle and its completion event never reached us.
+    String r = Printscreen_Formula_script.MYReset(false)
+    if (r == "Cannot reset while active")
+        Debug.Trace("PrintScreen: watchdog — capture #" + _CaptureSeq + " still running after " + elapsed + "s, re-arming")
+        RegisterForSingleUpdate(30.0)
+        return
+    endif
+
+    Debug.Trace("PrintScreen: watchdog — no completion event for capture #" + _CaptureSeq + " after " + elapsed + "s (" + r + ")")
+    OnScreenshotCompleted("finished, but no completion report was received")
 EndEvent
 
 
@@ -702,10 +745,10 @@ Event OnKeyUp(int theKey, float holdtime)
     if (IsLatentScreenshotActive || IsStartingCapture)
         Debug.Notification("Cancelling...")
         Printscreen_Formula_script.Cancel()
-        IsLatentScreenshotActive = false
-        IsStartingCapture = false
-        _CompletionHandled = false
+        ; Clear our state now. The worker's cancelled event arrives with the
+        ; sequence number we just dropped and OnPrintScreenComplete ignores it.
         ; UI restore handled by C++ callback when AutoUI=true
+        _ResetCaptureState()
         return
     endif
 
@@ -721,7 +764,6 @@ Event OnKeyUp(int theKey, float holdtime)
 
     IsStartingCapture = true
     LastKeyPressTime = currentTime
-    _CompletionHandled = false
 
     ; All params passed through TakePhoto; C++ uses what it needs per ImageType
     if (ImageType == "H264")
@@ -736,64 +778,44 @@ EndEvent
 ; HELPER FUNCTIONS
 ; ==============================================================================
 
-bool Function _IsLongRunningCapture()
-    if (ImageType == "GIF" || ImageType == "AGIF" || ImageType == "APNG")
-        return true
-    endif
-    if (ImageType == "H264")
-        return true
-    endif
-    if (ImageType == "DDS")
-        if (StringUtil.Find(Mode, "BC6") >= 0 || StringUtil.Find(Mode, "BC7") >= 0)
-            return true
-        endif
-    endif
-    return false
+; Clears every piece of per-capture state and disarms the watchdog. Called on
+; completion, on cancel, on load, and when a start is rejected.
+Function _ResetCaptureState()
+    IsLatentScreenshotActive = false
+    IsStartingCapture = false
+    _CaptureStartRealTime = 0.0
+    _CaptureSeq = 0
+    UnregisterForUpdate()
 EndFunction
 
-
-
-bool Function _HandleCompletionResult(String r)
-    if (_CompletionHandled)
-        return true
+; Expected capture length plus a generous margin, in real seconds. Only a
+; lost completion event ever lets this expire; OnUpdate re-checks with the
+; plugin before declaring the capture finished.
+float Function _WatchdogTimeout()
+    if (ImageType == "H264")
+        return VideoDuration + 30.0
+    elseif (ImageType == "GIF" || ImageType == "AGIF" || ImageType == "APNG")
+        return Duration + 90.0            ; frames staged to disk, then a slow encode
     endif
-    Result = r
+    return 60.0                           ; stills; BC7_SLOW DDS can take a while
+EndFunction
 
-    ; Prefer explicit CALLBACK_ prefix from C++ side
-    if (StringUtil.Find(Result, "CALLBACK_") == 0)
-        _CompletionHandled = true
-        if (Result == "CALLBACK_SUCCESS")
-            OnScreenshotCompleted("Success")
-        elseif (Result == "CALLBACK_CANCELLED")
-            OnScreenshotCompleted("Cancelled")
-        elseif (StringUtil.Find(Result, "CALLBACK_ERROR:") == 0)
-            OnScreenshotCompleted(StringUtil.Substring(Result, 15))
-        else
-            OnScreenshotCompleted(Result)
-        endif
-        return true
+; Pulls the "message" value out of the completion JSON for the error
+; notification. Falls back to the whole payload if the key is not found.
+; (An escaped quote inside the message would end it early; the plugin's
+; error strings do not contain quotes.)
+String Function _ExtractMessage(String payload)
+    String marker = "\"message\":\""      ; ("key" is a Papyrus script type; can't be a variable name)
+    int start = StringUtil.Find(payload, marker)
+    if (start < 0)
+        return payload
     endif
-
-    ; Fallback string matching for legacy/event path
-    if (Result == "Ready")
-        _CompletionHandled = true
-        OnScreenshotCompleted("Success")
-        return true
-    elseif (StringUtil.Find(Result, "Success") >= 0)
-        _CompletionHandled = true
-        OnScreenshotCompleted("Success")
-        return true
-    elseif (StringUtil.Find(Result, "Error") >= 0 || StringUtil.Find(Result, "Failed") >= 0)
-        _CompletionHandled = true
-        OnScreenshotCompleted(Result)
-        return true
-    elseif (StringUtil.Find(Result, "Cancel") >= 0)
-        _CompletionHandled = true
-        OnScreenshotCompleted("Cancelled")
-        return true
+    start += StringUtil.GetLength(marker)
+    int stop = StringUtil.Find(payload, "\"", start)
+    if (stop < start)
+        return payload
     endif
-
-    return false
+    return StringUtil.Substring(payload, start, stop - start)
 EndFunction
 
 Function UpdateHotkey(int newKey)

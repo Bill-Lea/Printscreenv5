@@ -47,38 +47,102 @@ static std::string EscapeJson(const std::string& s) {
     return out;
 }
 
+// ------------------------------------------------------------
+// Completion status protocol (shared with Printscreen_MainQuest_script.psc)
+//
+// The mod event carries the machine-readable outcome in numArg so Papyrus
+// never has to parse the JSON string (StringUtil.Find is case-sensitive and
+// substring matching over a payload that contains a user-chosen path is
+// fragile). numArg packs two integers:
+//
+//     numArg = sequence * 10 + status
+//     status:   0 = success, 1 = cancelled, 2 = error
+//     sequence: the value returned by TakePhoto as "Started:<sequence>"
+//
+// Papyrus decodes with  status = code % 10,  sequence = code / 10  and drops
+// any event whose sequence is not the capture it is currently waiting on, so
+// a late event from a cancelled or reload-interrupted capture cannot clear
+// the state of the capture that replaced it. A float holds integers exactly
+// up to 2^24, so the packing stays exact for 1.6 million captures per
+// game session.
+//
+// strArg still carries the JSON for logging and for the error message:
+//     {"status":"success"|"cancelled"|"error","seq":N,"message":"...","path":"..."}
+// ------------------------------------------------------------
+enum CompletionStatus : int {
+    kStatusSuccess   = 0,
+    kStatusCancelled = 1,
+    kStatusError     = 2
+};
+
+static std::atomic<std::uint32_t> g_captureSequence{0};
+
+static const char* StatusName(int status) {
+    switch (status) {
+        case kStatusSuccess:   return "success";
+        case kStatusCancelled: return "cancelled";
+        default:               return "error";
+    }
+}
+
+static float PackCompletionCode(std::uint32_t sequence, int status) {
+    return static_cast<float>(sequence * 10u + static_cast<std::uint32_t>(status));
+}
+
+// Map the worker's CALLBACK_* result string to a status code and a
+// human-readable message. Shared by every completion callback so the two
+// TakePhoto entry points cannot drift apart.
+static void ClassifyWorkerResult(const std::string& r, int& status, std::string& message) {
+    if (r == "CALLBACK_SUCCESS") {
+        status  = kStatusSuccess;
+        message = "Capture completed successfully";
+    } else if (r == "CALLBACK_CANCELLED") {
+        status  = kStatusCancelled;
+        message = "Capture was cancelled";
+    } else if (r.rfind("CALLBACK_ERROR:", 0) == 0) {
+        status  = kStatusError;
+        message = r.substr(15);
+        if (!message.empty() && message.front() == ' ')
+            message.erase(0, 1);  // strip the space after "CALLBACK_ERROR:"
+    } else {
+        // The worker only emits CALLBACK_* strings; anything else is a bug in
+        // the session and should surface as an error, not vanish.
+        status  = kStatusError;
+        message = r;
+    }
+}
+
 // Queue a SKSE mod-callback event to notify Papyrus asynchronously.
-// Payload is a JSON string with status, message, and optional path fields.
+// See "Completion status protocol" above for the numArg/strArg layout.
 static void QueueModEvent(const std::string& eventName,
-                          const std::string& status,
+                          std::uint32_t sequence,
+                          int status,
                           const std::string& message,
                           const std::string& outputPath = "") {
     auto* task = SKSE::GetTaskInterface();
     if (!task) return;
 
     // Build JSON payload (simple concatenation, no external dependency)
-    std::string json = "{\"status\":\"" + EscapeJson(status) + "\"," +
+    std::string json = "{\"status\":\"" + std::string(StatusName(status)) + "\"," +
+                       "\"seq\":" + std::to_string(sequence) + "," +
                        "\"message\":\"" + EscapeJson(message) + "\"";
     if (!outputPath.empty()) {
         json += ",\"path\":\"" + EscapeJson(outputPath) + "\"";
     }
     json += "}";
 
-    task->AddTask([eventName, json]() {
+    const float code = PackCompletionCode(sequence, status);
+
+    task->AddTask([eventName, json, code]() {
         auto* src = SKSE::GetModCallbackEventSource();
         if (!src) return;
         SKSE::ModCallbackEvent ev{
             RE::BSFixedString(eventName.c_str()),
             RE::BSFixedString(json.c_str()),
-            0.0f, nullptr
+            code, nullptr
         };
         src->SendEvent(&ev);
     });
-}
-
-// Legacy payload-only overload for backward compat
-static void QueueModEvent(const std::string& payload) {
-    QueueModEvent("PrintScreenComplete", "unknown", payload);
 }
 
 static std::string ToLower(std::string s) {
@@ -215,13 +279,22 @@ static CaptureRequest ParseRequestJson(const std::string& jsonStr) {
 static std::string TakePhoto_Internal_Json(RE::StaticFunctionTag*,
                                           std::string jsonConfig) {
     CaptureRequest req = ParseRequestJson(jsonConfig);
-    auto startResult = CaptureSession::GetSingleton().Start(req, [](const std::string& r) {
-        QueueModEvent(r);
-    });
+    // Same completion protocol as TakePhoto (see QueueModEvent), so a script
+    // driving this entry point gets the same numArg code and sequence.
+    const std::uint32_t seq = ++g_captureSequence;
+    auto startResult = CaptureSession::GetSingleton().Start(
+        req,
+        [seq, outputDir = req.outputDir](const std::string& r) {
+            int status;
+            std::string message;
+            ClassifyWorkerResult(r, status, message);
+            QueueModEvent("PrintScreenComplete", seq, status, message,
+                          util::wstring_to_utf8(outputDir));
+        });
 
     switch (startResult) {
         case CaptureSession::StartResult::Accepted:
-            return "Starting";
+            return "Started:" + std::to_string(seq);
         case CaptureSession::StartResult::BusyCancelled:
             return "Previous capture cancelled";
         default:
@@ -313,32 +386,23 @@ static std::string TakePhoto(
         MenuEventSink::GetSingleton()->SetMenusHidden(true);
     }
 
+    // Sequence number for this capture. Returned to Papyrus in the start
+    // string and echoed back in the completion event so the script can tell
+    // this capture's completion apart from a late one (see the protocol note
+    // above QueueModEvent). Burned if Start() rejects the request — harmless.
+    const std::uint32_t seq = ++g_captureSequence;
+
     auto startResult = session.Start(
         req,
         // Completion callback — fires after encoding (or on error/cancel).
-        // Sends structured JSON event to Papyrus with status, message, and path.
+        // Sends the PrintScreenComplete event with the packed status code in
+        // numArg and the JSON payload in strArg.
         // Executes on the worker thread; UI restore is marshalled to game thread.
-        [autoUI, outputDir = req.outputDir](const std::string& r) {
-            std::string status, message;
-            if (r == "CALLBACK_SUCCESS") {
-                status = "success";
-                message = "Capture completed successfully";
-            } else if (r == "CALLBACK_CANCELLED") {
-                status = "cancelled";
-                message = "Capture was cancelled";
-            } else if (r.find("CALLBACK_ERROR:") == 0) {
-                status = "error";
-                message = r.substr(15);
-                if (!message.empty() && message.front() == ' ')
-                    message.erase(0, 1);  // strip the space after "CALLBACK_ERROR:"
-            } else if (r == "Already running" || r.find("Error") == 0) {
-                status = "error";
-                message = r;
-            } else {
-                status = "unknown";
-                message = r;
-            }
-            QueueModEvent("PrintScreenComplete", status, message,
+        [autoUI, seq, outputDir = req.outputDir](const std::string& r) {
+            int status;
+            std::string message;
+            ClassifyWorkerResult(r, status, message);
+            QueueModEvent("PrintScreenComplete", seq, status, message,
                           util::wstring_to_utf8(outputDir));
             MenuEventSink::GetSingleton()->ClearCaptureToken();
             if (autoUI) {
@@ -374,7 +438,9 @@ static std::string TakePhoto(
     if (autoUI) {
         MenuEventSink::GetSingleton()->SetCaptureToken(session.GetToken());
     }
-    return "Started";
+    // "Started:<sequence>" — Papyrus stores the number and matches it against
+    // the completion event's sequence.
+    return "Started:" + std::to_string(seq);
 }
 
 static std::string GetResult(RE::StaticFunctionTag*) {
@@ -595,12 +661,15 @@ void PapyrusBindings::OnPostLoadGame() {
     // Cancel any in-flight capture FIRST. Previously the registered temp
     // directories were deleted before the session was cancelled, so a worker
     // still writing frames could have its temp dir removed out from under it.
+    //
+    // No synthetic "cancelled" event is sent from here. ForceReset() cancels
+    // the token and the worker's own completion callback then delivers a
+    // CALLBACK_CANCELLED event for that capture's sequence number. A second
+    // event from here produced a duplicate, and the Papyrus side has already
+    // reset its capture state in OnPlayerLoadGame anyway.
     auto& session = CaptureSession::GetSingleton();
-    const bool wasActive = !session.IsIdle();
-    if (wasActive) {
-        logger::info("  Session was active — cancelling and notifying Papyrus");
-        QueueModEvent("PrintScreenComplete", "cancelled",
-                        "Capture cancelled by game reload");
+    if (!session.IsIdle()) {
+        logger::info("  Session was active — cancelling; worker will report CALLBACK_CANCELLED");
     }
     session.ForceReset();
 
