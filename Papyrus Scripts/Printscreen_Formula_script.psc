@@ -10,8 +10,14 @@ bool Function CheckPath(String path) Global Native
 ; The final AutoUI parameter MUST match the C++ binding.
 ; It has a default so older Papyrus call sites that pass only the original
 ; video parameters can still compile.
-; Returns immediately: "Started", "Already running", or an error string.
-; Completion is notified via the PrintScreenComplete mod event.
+; Returns immediately with one of:
+;   "Started:<seq>"              accepted; <seq> is this capture's sequence number
+;   "Previous capture cancelled" a capture was still running and has been cancelled instead
+;   "Error: ..."                 could not start
+; Completion is notified via the PrintScreenComplete mod event:
+;   numArg = seq * 10 + status   (status: 0=success, 1=cancelled, 2=error)
+;   strArg = {"status":"...","seq":N,"message":"...","path":"..."}
+; Compare seq against the value from "Started:<seq>" and ignore anything else.
 ; Parameter 8 (DeltaMode): 0=off (full frames), 1=region extraction, 2=true delta (with transparency)
 ; Parameter 9 (Optimize): 0=off, 1=on (transparency optimization for delta frames)
 ; Parameter 10 (Compression): PNG zlib level 0-9
