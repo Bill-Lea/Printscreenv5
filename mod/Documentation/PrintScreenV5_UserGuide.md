@@ -223,9 +223,9 @@ The point of this is stitching. Panorama tools need a focal length to line up im
 
 **The capture cancels itself when I open my inventory.** Intended. Opening a pause or input menu during an animated or video capture cancels it, because nine times out of ten you did not mean to keep recording. For stills there is nothing to interrupt.
 
-**The HUD shows up in my shots.** Something is forcing menus on. PrintScreen hides the UI through the same flag as the `tm` console command; if `tm` does not hide it in your load order, PrintScreen cannot either. (The 5.0.0 and 5.0.1 releases had a settings bug where this toggle did not affect captures; that is fixed in the next build.)
+**The HUD shows up in my shots.** Something is forcing menus on. PrintScreen hides the UI through the same flag as the `tm` console command; if `tm` does not hide it in your load order, PrintScreen cannot either. (The 5.0.0 and 5.0.1 releases had a settings bug where this toggle did not affect captures; 5.0.2 fixes it.)
 
-**The capture finished but I never got a notification, and the next key press says "Cancelling...".** This was an event-matching defect in 5.0.0 (the file itself saved fine). 5.0.1 matches completion events by capture number and adds a watchdog that clears the stuck state; if you still see it on 5.0.1, report it with the Papyrus log.
+**The capture finished but I never got a notification, and the next key press says "Cancelling...".** This was an event-matching defect in 5.0.0 (the file itself saved fine). 5.0.1 and later match completion events by capture number and add a watchdog that clears the stuck state, confirmed working in 5.0.2; if you still see it, report it with the Papyrus log.
 
 **DDS captures take forever.** BC6h and BC7 compress on the CPU at seconds per frame, not milliseconds. The UI comes back as soon as the frame is grabbed; only the encoding is slow. Pick BC1 or BC7_FAST when you do not need the quality.
 

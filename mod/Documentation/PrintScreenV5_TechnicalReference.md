@@ -315,9 +315,9 @@ The full recipe with pinned versions lives in `BUILD.md`; it is the correspondin
 
 ## Known issues and open questions
 
-Verified against source as of this writing; the behavioral ones have not been confirmed in a live game session.
+Verified against source as of this writing. The behavioral fixes below were confirmed in a live game session on 5.0.2 (menu toggle, hotkey cancellation, normal completion and shot counting).
 
-**Fixed since the 5.0.0 review, pending a live test:**
+**Fixed since the 5.0.0 review, verified in game on 5.0.2:**
 
 - The MCM's "Automatic Menu Removal" toggle wrote `MainQuest.Menu`, but the capture path passed a separate `AutoUI` property (parameter 20 of `TakePhoto`) that only the JSON file set, so the toggle never affected a capture. `AutoUI` is gone: `Menu` is now the single property, passed to `TakePhoto` directly, and the `AutoUI` JSON key is no longer written or required (an old file that still has it is ignored). The C++ side is unchanged; its `autoUI` request field is what `Menu` feeds.
 - The completion event was never recognized by Papyrus (lowercase JSON statuses against a case-sensitive matcher looking for `CALLBACK_` prefixes and capitalized keywords), so the success notification and shot counter never fired and the state flags stayed set until the next hotkey press. Status now travels as a numeric code with a capture sequence number; see "Completion event protocol".
@@ -327,7 +327,7 @@ Verified against source as of this writing; the behavioral ones have not been co
 
 **Cosmetic or inert, verified:**
 
-2. Version strings disagree: the plugin is 5.0.1 (`SKSEPluginInfo`) and the MCM header shows the MainQuest `Version` property, now `"5.01"`, but `plugin.cpp` still logs "(v4.0 refactored)", and the EXIF `cameraModel`/`software` strings say "PrintScreen V4".
+2. Version strings disagree: the plugin is 5.0.2 (`SKSEPluginInfo`) and the MCM header shows the MainQuest `Version` property, now `"5.02"`, but `plugin.cpp` still logs "(v4.0 refactored)", and the EXIF `cameraModel`/`software` strings say "PrintScreen V4".
 3. `SaveAndHideAllUI` and `RestoreAllUI` are declared native in `Printscreen_Formula_script.psc` but are not registered in `Bindings.cpp`; calling them would fail at runtime. Nothing currently calls them.
 4. `TakePhoto_Internal_Json` and `ParseRequestJson` in `Bindings.cpp` form a complete JSON-string capture API, but no Papyrus function is bound to them. Inert until wired up.
 5. `Printscreen_MAP_script.GetKeyName(183)` returns "0". Scancode 183 is PrintScreen/SysRq, so binding it through the MCM is rejected as invalid and the JSON validator resets it. The `Key_TakePhoto` property default is now 14 (Backspace), matching the `Validate_Key_TakePhoto` fallback, so a fresh install no longer starts on a key the map rejects.
