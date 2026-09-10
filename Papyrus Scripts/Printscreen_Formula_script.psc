@@ -7,7 +7,7 @@ Scriptname Printscreen_Formula_script extends Quest
 bool Function CheckPath(String path) Global Native
 
 ; TakePhoto — full V4 signature with video capture parameters.
-; The final AutoUI parameter MUST match the C++ binding.
+; The final Menu parameter (hide HUD/menus during capture) MUST match the C++ binding.
 ; It has a default so older Papyrus call sites that pass only the original
 ; video parameters can still compile.
 ; Returns immediately with one of:
@@ -21,7 +21,7 @@ bool Function CheckPath(String path) Global Native
 ; Parameter 8 (DeltaMode): 0=off (full frames), 1=region extraction, 2=true delta (with transparency)
 ; Parameter 9 (Optimize): 0=off, 1=on (transparency optimization for delta frames)
 ; Parameter 10 (Compression): PNG zlib level 0-9
-String Function TakePhoto(String basePath, String imageType, float jpgCompression, String Mode, float Duration, float Fps, int LoopCount, int DeltaMode, int Optimize, int Compression, float VideoDuration, int TargetResolution, int VideoFrameRate, int QualityPreset, int VideoBitrate, float KeyframeInterval, int EncoderPreference, int RateControl, int VideoContainer, bool AutoUI = true) Global Native
+String Function TakePhoto(String basePath, String imageType, float jpgCompression, String Mode, float Duration, float Fps, int LoopCount, int DeltaMode, int Optimize, int Compression, float VideoDuration, int TargetResolution, int VideoFrameRate, int QualityPreset, int VideoBitrate, float KeyframeInterval, int EncoderPreference, int RateControl, int VideoContainer, bool Menu = true) Global Native
 
 ;
 String Function Cancel() Global Native

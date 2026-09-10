@@ -10,7 +10,7 @@ Import UI
 ; ==============================================================================
 ; VERSION
 ; ==============================================================================
-String Property Version = "4.02" Auto Hidden
+String Property Version = "5.01" Auto Hidden
 
 ; ==============================================================================
 ; IMAGE CONFIGURATION
@@ -44,9 +44,8 @@ int    Property VideoContainer      = 0    Auto    ; 0=MP4
 ; ==============================================================================
 ; UI / HOTKEY
 ; ==============================================================================
-bool Property Menu = true Auto
-bool Property AutoUI = true Auto
-int  Property Key_TakePhoto = 183 Auto
+bool Property Menu = true Auto      ; hide HUD/menus during capture (passed to TakePhoto)
+int  Property Key_TakePhoto = 14 Auto
 
 
 ; ==============================================================================
@@ -171,7 +170,6 @@ Function WriteJson()
 
     ; UI
     Printscreen_JSON_script.SetIntValue(jsonFilename, "Menu", Menu as int)
-    Printscreen_JSON_script.SetIntValue(jsonFilename, "AutoUI", AutoUI as int)
     Printscreen_JSON_script.SetIntValue(jsonFilename, "Key_TakePhoto", Key_TakePhoto)
 
     Printscreen_JSON_script.Save(jsonFilename)
@@ -208,9 +206,9 @@ Function ReadJson()
     VideoContainer = Printscreen_JSON_script.GetIntValue(jsonFilename, "VideoContainer")
 
     ; UI
-    ; Menu and AutoUI are Bool properties and cannot carry the -1 sentinel
-    ; (-1 as Bool is true), so "absent or wrong type" is resolved here rather
-    ; than in Validate_Menu()/Validate_AutoUI().
+    ; Menu is a Bool property and cannot carry the -1 sentinel (-1 as Bool
+    ; is true), so "absent or wrong type" is resolved here rather than in
+    ; Validate_Menu().
     int menuRead = Printscreen_JSON_script.GetIntValue(jsonFilename, "Menu", -1)
     if(menuRead < 0)
         Menu = true                                 ; property default
@@ -218,12 +216,6 @@ Function ReadJson()
         Menu = menuRead as BOOL
     endif
 
-    int autoUIRead = Printscreen_JSON_script.GetIntValue(jsonFilename, "AutoUI", -1)
-    if(autoUIRead < 0)
-        AutoUI = true                               ; property default
-    else
-        AutoUI = autoUIRead as bool
-    endif
     Key_TakePhoto = Printscreen_JSON_script.GetIntValue(jsonFilename, "Key_TakePhoto", -1)
 
     Debug.Notification("PrintScreen: Config loaded from JSON ") 
@@ -255,7 +247,7 @@ EndFunction
 ; ImageType="AGIF") with script defaults ("PNG") instead of reading it.
 ; Also added the previously-unchecked "Path" key.
 bool function jsonComplete()
-if(!Printscreen_JSON_script.HasStringValue(jsonfilename,"Path" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"ImageType" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Duration" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Fps" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"LoopCount" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Compression" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"DeltaMode" ) ||  !Printscreen_JSON_script.HasINtValue(jsonfilename,"Optimize" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename, "Quality" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"TargetResolution" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"QualityPreset" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename, "RateControl") ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoContainer" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Menu" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"AutoUI" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
+if(!Printscreen_JSON_script.HasStringValue(jsonfilename,"Path" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"ImageType" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Duration" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Fps" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"LoopCount" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Compression" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"DeltaMode" ) ||  !Printscreen_JSON_script.HasINtValue(jsonfilename,"Optimize" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename, "Quality" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"TargetResolution" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"QualityPreset" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename, "RateControl") ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoContainer" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Menu" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
 return false
 else
 return true
@@ -534,14 +526,6 @@ Menu= true
 Endif
 EndFunction
 
-Function Validate_AutoUI()
-if(AutoUI == true || AutoUI == false)
-return
-else
-AutoUI=Menu
-Endif
-EndFunction
-
 Function Validate_Key_TakePhoto()
     if(Key_TakePhoto == -1)                   ; absent or wrong type in JSON
         Key_TakePhoto = 14                 ; property default
@@ -596,7 +580,6 @@ Validate_EncoderPreference()
 Validate_RateControl()
 Validate_VideoContainer()
 Validate_Menu()
-Validate_AutoUI()
 Validate_Key_TakePhoto()
 endFunction
 
@@ -614,7 +597,7 @@ Function CaptureImage(String basePath, String imgType, float jpgComp,  String ca
         return
     endif
 
-    ; When AutoUI is true, the C++ native handles all UI hide/show via SendConsoleCommand("tm").
+    ; When Menu is true, the C++ native handles all UI hide/show itself (Scaleform flag).
     ; Papyrus-side HideHud/ShowHud calls are removed to prevent double-toggling.
 
     IsLatentScreenshotActive = true
@@ -626,9 +609,9 @@ Function CaptureImage(String basePath, String imgType, float jpgComp,  String ca
     ; Parameter 8 = DeltaMode (0=off, 1=region, 2=true delta)
     ; Parameter 9 = Optimize (0=off, 1=on — transparency for delta frames)
     ; Parameter 10 = Compression (PNG zlib level 0-9)
-    ; AutoUI is the 19th parameter and must match the C++ binding exactly.
+    ; Menu (hide HUD/menus) is the 20th parameter and must match the C++ binding exactly.
     ; -----------------------------------------------------------------------
-    String startResult = Printscreen_Formula_script.TakePhoto( basePath,  imageType,  jpg_Compression,  Mode,  Duration,  Fps, LoopCount,  DeltaMode, Optimize, Compression,  VideoDuration,  TargetResolution, VideoFrameRate,  QualityPreset,  VideoBitrate,  KeyframeInterval,  EncoderPreference,  RateControl, VideoContainer, AutoUI)
+    String startResult = Printscreen_Formula_script.TakePhoto( basePath,  imageType,  jpg_Compression,  Mode,  Duration,  Fps, LoopCount,  DeltaMode, Optimize, Compression,  VideoDuration,  TargetResolution, VideoFrameRate,  QualityPreset,  VideoBitrate,  KeyframeInterval,  EncoderPreference,  RateControl, VideoContainer, Menu)
 
     if (StringUtil.Find(startResult, "Started:") == 0)
         ; Accepted. Remember which capture we are waiting on; the completion
@@ -672,7 +655,7 @@ Function OnScreenshotCompleted(String completionResult)
         Debug.Notification("Capture: " + completionResult)
     endif
 
-    ; UI restore is handled by C++ when AutoUI=true (via callback)
+    ; UI restore is handled by C++ when Menu=true (via callback)
 EndFunction
 
 ; ==============================================================================
@@ -747,7 +730,7 @@ Event OnKeyUp(int theKey, float holdtime)
         Printscreen_Formula_script.Cancel()
         ; Clear our state now. The worker's cancelled event arrives with the
         ; sequence number we just dropped and OnPrintScreenComplete ignores it.
-        ; UI restore handled by C++ callback when AutoUI=true
+        ; UI restore handled by C++ callback when Menu=true
         _ResetCaptureState()
         return
     endif

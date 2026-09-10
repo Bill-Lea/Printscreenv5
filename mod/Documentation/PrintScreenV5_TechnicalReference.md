@@ -216,7 +216,7 @@ string TakePhoto(string basePath, string imageType, float jpgCompression,
                  float VideoDuration, int TargetResolution, int VideoFrameRate,
                  int QualityPreset, int VideoBitrate, float KeyframeInterval,
                  int EncoderPreference, int RateControl, int VideoContainer,
-                 bool AutoUI = true)
+                 bool Menu = true)        ; hide HUD/menus (C++ name: autoUI)
 string Cancel()
 string MYReset(bool force = false)
 bool   IsGamePaused()
@@ -317,12 +317,9 @@ The full recipe with pinned versions lives in `BUILD.md`; it is the correspondin
 
 Verified against source as of this writing; the behavioral ones have not been confirmed in a live game session.
 
-**Suspected, behavioral:**
-
-1. **The MCM's "Automatic Menu Removal" toggle writes the wrong property.** The toggle sets `MainQuest.Menu`; the capture path passes `AutoUI` (parameter 20 of `TakePhoto`), which only the JSON file sets. `Menu` is validated, persisted, and displayed, but never consumed by a capture. `Validate_AutoUI` only falls back to `Menu` when the `AutoUI` key is absent from the JSON. Expected visible effect: the toggle does nothing either way.
-
 **Fixed since the 5.0.0 review, pending a live test:**
 
+- The MCM's "Automatic Menu Removal" toggle wrote `MainQuest.Menu`, but the capture path passed a separate `AutoUI` property (parameter 20 of `TakePhoto`) that only the JSON file set, so the toggle never affected a capture. `AutoUI` is gone: `Menu` is now the single property, passed to `TakePhoto` directly, and the `AutoUI` JSON key is no longer written or required (an old file that still has it is ignored). The C++ side is unchanged; its `autoUI` request field is what `Menu` feeds.
 - The completion event was never recognized by Papyrus (lowercase JSON statuses against a case-sensitive matcher looking for `CALLBACK_` prefixes and capitalized keywords), so the success notification and shot counter never fired and the state flags stayed set until the next hotkey press. Status now travels as a numeric code with a capture sequence number; see "Completion event protocol".
 - Papyrus checked the busy return for `"Already running"`, which `TakePhoto` never returned, so a busy start surfaced as two "Capture failed" notifications. It now matches `Previous capture cancelled` and every rejected start produces one notification.
 - The reload hook sent a synthetic cancelled event in addition to the one the interrupted worker sends itself. Removed.
@@ -330,10 +327,10 @@ Verified against source as of this writing; the behavioral ones have not been co
 
 **Cosmetic or inert, verified:**
 
-2. Version strings disagree: the plugin is 5.0.0 (`SKSEPluginInfo`), but the MCM header shows the MainQuest `Version` property, still `"4.02"`. `plugin.cpp` also logs "(v4.0 refactored)", and the EXIF `cameraModel`/`software` strings say "PrintScreen V4".
+2. Version strings disagree: the plugin is 5.0.1 (`SKSEPluginInfo`) and the MCM header shows the MainQuest `Version` property, now `"5.01"`, but `plugin.cpp` still logs "(v4.0 refactored)", and the EXIF `cameraModel`/`software` strings say "PrintScreen V4".
 3. `SaveAndHideAllUI` and `RestoreAllUI` are declared native in `Printscreen_Formula_script.psc` but are not registered in `Bindings.cpp`; calling them would fail at runtime. Nothing currently calls them.
 4. `TakePhoto_Internal_Json` and `ParseRequestJson` in `Bindings.cpp` form a complete JSON-string capture API, but no Papyrus function is bound to them. Inert until wired up.
-5. `Printscreen_MAP_script.GetKeyName(183)` returns "0". Scancode 183 is PrintScreen/SysRq, the default hotkey. Also, the default-key fallback in `Validate_Key_TakePhoto` is 14 (Backspace), not the 183 property default.
+5. `Printscreen_MAP_script.GetKeyName(183)` returns "0". Scancode 183 is PrintScreen/SysRq, so binding it through the MCM is rejected as invalid and the JSON validator resets it. The `Key_TakePhoto` property default is now 14 (Backspace), matching the `Validate_Key_TakePhoto` fallback, so a fresh install no longer starts on a key the map rejects.
 6. `RecalculateFPS()` in the MainQuest script is never called.
 7. The MCM duration slider runs to 30 seconds while `Validate_Duration` clamps animated captures to 15.
 8. The shipped `mod/SKSE/Plugins/StorageUtilData` payloads are stale test data: `PrintScreen.json` is in the old sectioned format (fails the completeness check and is rewritten with defaults on first run, as designed), and nothing in the current scripts reads `PrintScreenConfig.json` at all.

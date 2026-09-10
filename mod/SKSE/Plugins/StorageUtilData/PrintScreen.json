@@ -1,5 +1,4 @@
 {
-    "AutoUI": 1,
     "Compression": 9,
     "DDS_Mode": "UNCOMPRESSED",
     "DeltaMode": 0,
@@ -36,7 +35,6 @@
         "videoduration": 10.0
     },
     "int": {
-        "autoui": 1,
         "compression": 9,
         "deltamode": 0,
         "encoderpreference": 0,

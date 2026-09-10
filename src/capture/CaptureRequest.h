@@ -51,7 +51,8 @@ struct CaptureRequest {
     int    videoContainer       = 0;       // 0=MP4
 
     // UI visibility control
-    // true  = auto-hide UI before capture, restore after (via "tm" console command)
+    // true  = hide HUD/menus before capture, restore after (Papyrus "Menu" property;
+    //         done via the UIController Scaleform flag, not a console command)
     // false = leave UI as-is
     bool autoUI = true;
 };
