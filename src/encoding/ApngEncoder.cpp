@@ -420,7 +420,7 @@ EncodeResult ApngEncoder::EncodeFromFiles(
     const std::vector<std::wstring>& framePaths,
     const std::wstring& outputPath,
     float fps, int loopCount,
-    int deltaMode, int /*optimize*/,
+    int deltaMode,
     CancellationToken::Ptr token)
 {
     logger::info("ApngEncoder::EncodeFromFiles: {} frames", framePaths.size());

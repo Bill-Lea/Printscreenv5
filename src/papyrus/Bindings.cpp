@@ -161,7 +161,6 @@ static CaptureRequest BuildRequest(
     float fps,
     int   loopCount,
     int   deltaMode,
-    int   optimize,
     int   pngCompression,
     float videoDuration,
     int   targetResolution,
@@ -184,7 +183,6 @@ static CaptureRequest BuildRequest(
     req.animFPS          = std::clamp(fps, 1.0f, 60.0f);
     req.loopCount        = std::clamp(loopCount, 0, 100);
     req.deltaMode        = std::clamp(deltaMode, 0, 2);
-    req.optimize         = (optimize != 0) ? 1 : 0;
     req.pngCompression   = std::clamp(pngCompression, 0, 9);
     req.videoDuration    = videoDuration;
     req.targetResolution = std::clamp(targetResolution, 0, 4);
@@ -233,9 +231,6 @@ static CaptureRequest ParseRequestJson(const std::string& jsonStr) {
         }
         if (j.contains("loopCount")) {
             req.loopCount = std::clamp(j["loopCount"].get<int>(), 0, 100);
-        }
-        if (j.contains("optimize")) {
-            req.optimize = j["optimize"].get<int>() != 0 ? 1 : 0;
         }
         if (j.contains("deltaMode")) {
             req.deltaMode = std::clamp(j["deltaMode"].get<int>(), 0, 2);
@@ -357,7 +352,7 @@ static std::string TakePhoto(
     std::string basePath, std::string imageType,
     float jpgQuality, std::string compressionMode,
     float duration, float fps,
-    int loopCount, int deltaMode, int optimize, int pngCompression,
+    int loopCount, int deltaMode, int pngCompression,
     float videoDuration, int targetResolution, int videoFrameRate,
     int qualityPreset, int videoBitrateKbps,
     float keyframeIntervalSec, int encoderPreference,
@@ -366,7 +361,7 @@ static std::string TakePhoto(
 {
     logger::info("Papyrus TakePhoto: type={}, autoUI={}", imageType, autoUI);
     auto req = BuildRequest(basePath, imageType, jpgQuality, compressionMode,
-                            duration, fps, loopCount, deltaMode, optimize,
+                            duration, fps, loopCount, deltaMode,
                             pngCompression,
                             videoDuration, targetResolution, videoFrameRate,
                             qualityPreset, videoBitrateKbps,

@@ -23,8 +23,6 @@ float  Property Fps = 15.0 Auto
 int    Property LoopCount = 0 Auto
 int    Property Compression = 9 Auto          ; PNG zlib level 0-9
 int    Property DeltaMode = 0 Auto           ; 0=off (full frames), 1=region extraction, 2=true delta (with transparency)
-int    Property Optimize = 1 Auto
-float  Property Quality = 0.85 Auto           ; Animated quality 0.0-1.0
 String Property Tif_Mode = "UNCOMPRESSED" Auto
 String Property DDS_Mode = "UNCOMPRESSED" Auto
 String Property Mode = "UNCOMPRESSED" Auto     ; General compression mode for supported formats (e.g. BC7 for DDS, or GIF quantization)
@@ -152,8 +150,6 @@ Function WriteJson()
     Printscreen_JSON_script.SetIntValue(jsonFilename, "LoopCount", LoopCount)
     Printscreen_JSON_script.SetIntValue(jsonFilename, "Compression", Compression)
     Printscreen_JSON_script.SetIntValue(jsonFilename, "DeltaMode", DeltaMode)
-    Printscreen_JSON_script.SetIntValue(jsonFilename, "Optimize", Optimize)
-    Printscreen_JSON_script.SetFloatValue(jsonFilename, "Quality", Quality)
     Printscreen_JSON_script.SetStringValue(jsonFilename, "Tif_Mode", Tif_Mode)
     Printscreen_JSON_script.SetStringValue(jsonFilename, "DDS_Mode", DDS_Mode)
 
@@ -189,8 +185,6 @@ Function ReadJson()
     LoopCount = Printscreen_JSON_script.GetIntValue(jsonFilename, "LoopCount", -1)
     Compression = Printscreen_JSON_script.GetIntValue(jsonFilename, "Compression", -1)
     DeltaMode = Printscreen_JSON_script.GetIntValue(jsonFilename, "DeltaMode", -1)
-    Optimize = Printscreen_JSON_script.GetIntValue(jsonFilename, "Optimize", -1) 
-    Quality = Printscreen_JSON_script.GetFloatValue(jsonFilename, "Quality", -1.0)
     TIF_Mode =Printscreen_JSON_script.GetStringValue(jsonFilename, "Tif_Mode")
     DDS_Mode = Printscreen_JSON_script.GetStringValue(jsonFilename, "DDS_Mode")
 
@@ -247,7 +241,7 @@ EndFunction
 ; ImageType="AGIF") with script defaults ("PNG") instead of reading it.
 ; Also added the previously-unchecked "Path" key.
 bool function jsonComplete()
-if(!Printscreen_JSON_script.HasStringValue(jsonfilename,"Path" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"ImageType" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Duration" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Fps" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"LoopCount" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Compression" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"DeltaMode" ) ||  !Printscreen_JSON_script.HasINtValue(jsonfilename,"Optimize" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename, "Quality" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"TargetResolution" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"QualityPreset" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename, "RateControl") ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoContainer" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Menu" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
+if(!Printscreen_JSON_script.HasStringValue(jsonfilename,"Path" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"ImageType" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"JPG_Compression" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Duration" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"Fps" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"LoopCount" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Compression" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"DeltaMode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"Tif_Mode" ) ||  !Printscreen_JSON_script.HasStringValue(jsonfilename,"DDS_Mode" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"VideoDuration" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"TargetResolution" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"VideoFrameRate" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"QualityPreset" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoBitrate" ) ||  !Printscreen_JSON_script.HasFloatValue(jsonfilename,"KeyframeInterval" ) ||  !Printscreen_JSON_script.HasINTValue(jsonfilename,"EncoderPreference" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename, "RateControl") ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"VideoContainer" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Menu" ) ||  !Printscreen_JSON_script.HasIntValue(jsonfilename,"Key_TakePhoto" ) )
 return false
 else
 return true
@@ -359,30 +353,6 @@ Function Validate_DeltaMode()
         DeltaMode = 0
     elseif(DeltaMode > 2)
         DeltaMode = 2
-    endif
-EndFunction
-
-Function Validate_Optimize()
-    if(Optimize == -1)                   ; absent or wrong type in JSON
-        Optimize = 1                 ; property default
-        return
-    endif
-    if(Optimize < 0)
-        Optimize = 0
-    elseif(Optimize > 1)
-        Optimize = 1
-    endif
-EndFunction
-
-Function Validate_Quality()
-    if(Quality < 0.0)                   ; absent or wrong type in JSON
-        Quality = 0.85                 ; property default
-        return
-    endif
-    if(Quality < 0.0)
-        Quality = 0.0
-    elseif(Quality > 1.0)
-        Quality = 1.0
     endif
 EndFunction
 
@@ -566,8 +536,6 @@ Validate_Fps()
 Validate_LoopCount()
 Validate_Compression()
 Validate_DeltaMode()
-Validate_Optimize()
-Validate_Quality()
 Validate_Tif_Mode()
 Validate_DDS_Mode()
 Validate_VideoDuration()
@@ -607,11 +575,10 @@ Function CaptureImage(String basePath, String imgType, float jpgComp,  String ca
     ; TakePhoto signature (V4): all image + video params always passed.
     ; C++ side reads only the params relevant to imgType.
     ; Parameter 8 = DeltaMode (0=off, 1=region, 2=true delta)
-    ; Parameter 9 = Optimize (0=off, 1=on — transparency for delta frames)
-    ; Parameter 10 = Compression (PNG zlib level 0-9)
-    ; Menu (hide HUD/menus) is the 20th parameter and must match the C++ binding exactly.
+    ; Parameter 9 = Compression (PNG compression 0-9)
+    ; Menu (hide HUD/menus) is the 19th parameter and must match the C++ binding exactly.
     ; -----------------------------------------------------------------------
-    String startResult = Printscreen_Formula_script.TakePhoto( basePath,  imageType,  jpg_Compression,  Mode,  Duration,  Fps, LoopCount,  DeltaMode, Optimize, Compression,  VideoDuration,  TargetResolution, VideoFrameRate,  QualityPreset,  VideoBitrate,  KeyframeInterval,  EncoderPreference,  RateControl, VideoContainer, Menu)
+    String startResult = Printscreen_Formula_script.TakePhoto( basePath,  imageType,  jpg_Compression,  Mode,  Duration,  Fps, LoopCount,  DeltaMode, Compression,  VideoDuration,  TargetResolution, VideoFrameRate,  QualityPreset,  VideoBitrate,  KeyframeInterval,  EncoderPreference,  RateControl, VideoContainer, Menu)
 
     if (StringUtil.Find(startResult, "Started:") == 0)
         ; Accepted. Remember which capture we are waiting on; the completion

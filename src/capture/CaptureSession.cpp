@@ -172,11 +172,11 @@ static std::string RunAnimated(const CaptureRequest& req, CancellationToken::Ptr
     if (req.format == ImageFormat::AGIF) {
         GifEncoder enc;
         er = enc.EncodeFromFiles(tempFiles, outPath, req.animFPS, req.loopCount,
-                                  req.deltaMode, req.optimize, token);
+                                  req.deltaMode, token);
     } else {
         ApngEncoder enc;
         er = enc.EncodeFromFiles(tempFiles, outPath, req.animFPS, req.loopCount,
-                                  req.deltaMode, req.optimize, token);
+                                  req.deltaMode, token);
     }
 
     // Encoding complete — clean up temp frames via the guard's Cleanup().

@@ -35,7 +35,6 @@ struct CaptureRequest {
     float animFPS        = 10.0f;  // frames per second
     int   loopCount      = 0;      // 0 = infinite
     int   deltaMode      = 0;      // 0 = off (full frames), 1 = region extraction, 2 = true delta (with transparency)
-    int   optimize       = 0;      // 0 = off, 1 = on (transparency optimization for delta frames)
     int   pngCompression = 6;      // PNG zlib compression level 0-9 (for still PNG captures)
 
     // Video capture (H264)

@@ -15,11 +15,9 @@ int Property UseJsonFileID auto
 
 int Property JPG_CompressionID auto
 int Property Compression_ID auto
-int Property Quality_ID auto
 int Property DurationID auto
 int Property FPSID auto
 int Property LoopID auto
-int Property OptimizeID auto
 int Property DeltaModeID auto
 
 int Property Tif_ModeID auto
@@ -157,12 +155,10 @@ Function EnableWidgetsForType(string imgType)
 
 
     elseif (imgType == "AGIF" || imgType == "APNG")
-        
-        SetOptionFlags(OptimizeID, OPTION_FLAG_NONE)
+
         SetOptionFlags(DeltaModeID, OPTION_FLAG_NONE)
         SetOptionFlags(FPSID, OPTION_FLAG_NONE)
         SetOptionFlags(LoopID, OPTION_FLAG_NONE)
-        SetOptionFlags(Quality_ID, OPTION_FLAG_NONE)
         SetOptionFlags(DurationID, OPTION_FLAG_NONE)
 
 
@@ -185,11 +181,9 @@ Function ResetImageFlags()
     SetOptionFlags(DDS_ModeID, OPTION_FLAG_DISABLED)
     
     
-    SetOptionFlags(OptimizeID, OPTION_FLAG_DISABLED)
     SetOptionFlags(DeltaModeID, OPTION_FLAG_DISABLED)
     SetOptionFlags(FPSID, OPTION_FLAG_DISABLED)
     SetOptionFlags(LoopID, OPTION_FLAG_DISABLED)
-    SetOptionFlags(Quality_ID, OPTION_FLAG_DISABLED)
     SetOptionFlags(Compression_ID, OPTION_FLAG_DISABLED)
     SetOptionFlags(DurationID, OPTION_FLAG_DISABLED)
 EndFunction
@@ -341,7 +335,6 @@ Event OnPageReset(string pagename)
 
         JPG_CompressionID = AddSliderOption("JPG Compression", MainQuest.JPG_Compression, "{0}", jpgFlag)
         AddEmptyOption()
-        Quality_ID = AddSliderOption("Quality", MainQuest.Quality * 100.0, "{0}%", animFlag)
         DurationID = AddSliderOption("Capture Duration", MainQuest.Duration, "{0} s", animFlag)
         AddEmptyOption()
 
@@ -362,7 +355,6 @@ Event OnPageReset(string pagename)
 
         FPSID = AddSliderOption("FPS", MainQuest.Fps, "{0}", animFlag)
         LoopID = AddSliderOption("Loop Count", MainQuest.LoopCount as float, "{0}", animFlag)
-        OptimizeID = AddSliderOption("Optimize", MainQuest.Optimize as float, "{0}", animFlag)
         DeltaModeID = AddSliderOption("Delta Mode", MainQuest.DeltaMode as float, "{0}", animFlag)
         Compression_ID = AddSliderOption("PNG Compression", MainQuest.Compression as float, "{0}", pngFlag)
 
@@ -433,8 +425,6 @@ Event OnOptionHighlight(int option)
         SetInfoText("Select DDS mode\nBC6h and BC7 variants take several minutes to process")
     elseif (option == DurationID)
         SetInfoText("Duration of animated capture in seconds")
-    elseif (option == OptimizeID)
-        SetInfoText("Enable transparency optimization for delta frames in AGIF/APNG\n0=off, 1=on")
     elseif (option == DeltaModeID)
         SetInfoText("Differential encoding mode for AGIF/APNG animation\n0=Off (full frames), 1=Region extraction, 2=True delta (with transparency)")
     elseif (option == Compression_ID)
@@ -443,8 +433,6 @@ Event OnOptionHighlight(int option)
         SetInfoText("Number of frames to capture per second")
     elseif (option == LoopID)
         SetInfoText("Number of times to loop animated image\n0 = infinite looping")
-    elseif (option == Quality_ID)
-        SetInfoText("Quality factor for animated images (APNG/AGIF): 0 (low) to 100 (high)")
 
     ; --- Video Settings page: Capture ---
     elseif (option == oidVideoDuration)
@@ -693,26 +681,12 @@ Event OnOptionSliderOpen(int a_option)
         SetSliderDialogRange(0.0, 10.0)
         SetSliderDialogInterval(1.0)
 
-    elseif (a_option == OptimizeID)
-        SetSliderOptionValue(a_option, MainQuest.Optimize as float, "{0}", false)
-        SetSliderDialogStartValue(MainQuest.Optimize as float)
-        SetSliderDialogDefaultValue(1.0)
-        SetSliderDialogRange(0.0, 1.0)
-        SetSliderDialogInterval(1.0)
-
     elseif (a_option == DeltaModeID)
         SetSliderOptionValue(a_option, MainQuest.DeltaMode as float, "{0}", false)
         SetSliderDialogStartValue(MainQuest.DeltaMode as float)
         SetSliderDialogDefaultValue(0.0)
         SetSliderDialogRange(0.0, 2.0)
         SetSliderDialogInterval(1.0)
-
-    elseif (a_option == Quality_ID)
-        SetSliderOptionValue(a_option, MainQuest.Quality * 100.0, "{0}", false)
-        SetSliderDialogStartValue(MainQuest.Quality * 100.0)
-        SetSliderDialogDefaultValue(85.0)
-        SetSliderDialogRange(0.0, 100.0)
-        SetSliderDialogInterval(5.0)
 
     ; --- Video Settings page: Capture ---
     elseif (a_option == oidVideoDuration)
@@ -758,17 +732,9 @@ Event OnOptionSliderAccept(int a_option, float a_value)
         MainQuest.LoopCount = a_value as int
         SetSliderOptionValue(a_option, MainQuest.LoopCount as float, "{0}", false)
 
-    elseif (a_option == OptimizeID)
-        MainQuest.Optimize = a_value as int
-        SetSliderOptionValue(a_option, MainQuest.Optimize as float, "{0}", false)
-
     elseif (a_option == DeltaModeID)
         MainQuest.DeltaMode = a_value as int
         SetSliderOptionValue(a_option, MainQuest.DeltaMode as float, "{0}", false)
-
-    elseif (a_option == Quality_ID)
-        MainQuest.Quality = a_value / 100.0
-        SetSliderOptionValue(a_option, MainQuest.Quality * 100.0, "{0}", false)
 
     ; --- Video Settings page: Capture ---
     elseif (a_option == oidVideoDuration)

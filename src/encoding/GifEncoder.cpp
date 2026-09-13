@@ -191,11 +191,11 @@ EncodeResult GifEncoder::EncodeFromFiles(
     const std::vector<std::wstring>& framePaths,
     const std::wstring& outputPath,
     float fps, int loopCount,
-    int deltaMode, int optimize,
+    int deltaMode,
     CancellationToken::Ptr token)
 {
-    logger::info("GifEncoder::EncodeFromFiles: {} frames, fps={}, loopCount={}, deltaMode={}, optimize={}",
-                 framePaths.size(), fps, loopCount, deltaMode, optimize);
+    logger::info("GifEncoder::EncodeFromFiles: {} frames, fps={}, loopCount={}, deltaMode={}",
+                 framePaths.size(), fps, loopCount, deltaMode);
 
     if (framePaths.empty()) return EncodeResult::Fail("No frame files");
 
