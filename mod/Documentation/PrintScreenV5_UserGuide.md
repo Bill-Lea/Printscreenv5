@@ -1,175 +1,213 @@
-# PrintScreen V5 — user guide
+# PrintScreen V5 User Guide
 
-**Version:** 5.0.0
-**Author:** William G Lea
-**Game:** Skyrim Special Edition / Anniversary Edition (SKSE64 plugin)
-**Platform:** Windows 10/11
+Version 5.0.3
+Author: William G Lea
+For Skyrim Special Edition and Anniversary Edition (SKSE64 plugin)
+Windows 10 or 11
 
 ---
 
-## What PrintScreen does
+## What it does
 
-PrintScreen takes screenshots, animated images, and video from inside Skyrim. It grabs frames straight from the Windows display output instead of hooking the game's renderer, so it works no matter what you layer on top of the game: ENB, ReShade, Steam overlay, ShadowPlay, anything. What you see on screen is what lands in the file.
+PrintScreen takes screenshots, animated images, and short videos from inside Skyrim. You press a key, the HUD drops out for a moment, and a file lands in a folder you pick.
 
-Capture types:
+It doesn't hook the game's renderer. It reads the finished frame from Windows itself, using the same desktop duplication feature that screen recorders use. That has a nice consequence: whatever ENB, ReShade preset, or overlay you run, the file shows what your monitor showed.
 
-- Stills: PNG, JPEG, BMP, TIFF, DDS
-- Animated: GIF (single frame), AGIF (animated GIF), APNG
-- Video: H.264 in an MP4 container, with GPU encoding when your card supports it
+It also has a less nice consequence, which is covered under "Things to know" below.
 
-The trade-off of capturing at the desktop level: PrintScreen sees your whole desktop. On a multi-monitor setup every monitor ends up in the shot, and content protected by HDCP will come through black. There is no way around either, it is how Windows desktop duplication works.
+### Formats
 
-### What changed in V5
+| Kind | Formats |
+|------|---------|
+| Still image | PNG, JPG, BMP, TIF, DDS, GIF (single frame) |
+| Animation | AGIF (animated GIF), APNG (animated PNG) |
+| Video | H.264 in an MP4 file |
 
-If you used V4, the short version:
+### If you're coming from V4
 
-- **No more PapyrusUtil or JContainers.** The plugin reads and writes its own JSON config natively. Two fewer required mods.
-- **Your screenshots carry EXIF metadata.** Still captures record the camera FOV at the moment of the shot and write a 35mm-equivalent focal length into the file. Panorama stitchers (PhotoFileMerge V2, Hugin, PTGui) pick this up automatically instead of asking you for numbers.
-- **The hotkey survives bad saves.** The plugin re-arms the Take Photo key from C++ on every save load, so a stale or mid-playthrough install can no longer leave you with a dead key.
-- **Opening a menu mid-capture cancels it cleanly** and cleans up its temporary files. If the game crashes during an animated capture, the leftovers are swept on the next launch.
-- **Completion is event-driven.** The old polling loop is gone; the plugin gets called back when the capture finishes.
+- PapyrusUtil and JContainers are no longer required. The plugin reads and writes its own settings file.
+- Still captures get camera metadata. JPGs carry the in-game field of view as an EXIF focal length, and PNGs get a small companion file with the same numbers. Panorama software can use this instead of asking you.
+- The hotkey re-arms itself every time you load a save. A dead hotkey after a mid-playthrough install was a real problem in V4.
+- Captures cancel cleanly when you open a menu, and the plugin tidies up after itself, including after a crash.
 
 ---
 
 ## Requirements
 
-- Skyrim Special Edition 1.5.39 or newer, including all Anniversary Edition builds. VR is not supported.
-- [SKSE64](https://skse.silverlock.org/) matching your game version.
-- [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604) for the MCM. The mod captures fine without it, but then your only configuration route is editing the JSON file by hand.
-- Windows 10 or 11. Desktop duplication needs DXGI 1.2, which rules out anything older.
+- Skyrim Special Edition 1.5.39 or later. Every Anniversary Edition build is fine. Skyrim VR is not supported.
+- [SKSE64](https://skse.silverlock.org/) for your game version.
+- [SkyUI](https://www.nexusmods.com/skyrimspecialedition/mods/12604), for the settings menu. The plugin will capture without it, but then the only way to change settings is to edit the settings file by hand.
+- Windows 10 or 11.
 
-PapyrusUtil and JContainers are **not** needed anymore. If you have them for other mods, leave them; PrintScreen no longer touches them.
+You do not need PapyrusUtil or JContainers. If other mods want them, leave them installed. PrintScreen ignores them.
 
 ---
 
 ## Installation
 
-Install the downloaded archive with Mod Organizer 2 or Vortex. The archive is laid out the way the game expects, so a mod manager install needs no decisions from you.
+Install the archive with Mod Organizer 2 or Vortex. It's laid out the way the game expects, so there's nothing to choose.
 
-If you insist on doing it by hand, the files go to these places under `Data\`:
+For a manual install, these go under your `Data` folder:
 
-| File | Destination |
-|------|-------------|
+| File | Goes in |
+|------|---------|
 | `Printscreen.esp` | `Data\` |
 | `SKSE\Plugins\Printscreen.dll` | `Data\SKSE\Plugins\` |
 | `Scripts\Printscreen_*.pex` | `Data\Scripts\` |
 | `Interface\PrintScreen\*.dds` | `Data\Interface\PrintScreen\` |
 | `SKSE\Plugins\StorageUtilData\PrintScreen.json` | `Data\SKSE\Plugins\StorageUtilData\` |
 
-Then enable the ESP and play. There is no INI to create, no console command to run.
+Enable the ESP and start the game through SKSE.
+
+### Check two settings before your first shot
+
+The settings file that ships in the archive came from a test machine. It loads fine, but it sets two things you almost certainly want to change:
+
+- The output folder is `C:/pictures/test/vanilla`. The plugin will create that folder and happily fill it.
+- The hotkey is Right Shift.
+
+Open the MCM, set **Path** to where you want your screenshots, and pick a key you like. Both are saved when you close the menu.
 
 ---
 
 ## Quick start
 
-1. Launch the game through SKSE.
-2. Open the MCM (Mods section, ESC → Mod Configuration) and find PrintScreen.
-3. Set **Path** to wherever you want screenshots. The folder is created if it does not exist. It must be absolute (`C:/Games/Shots`, not `Shots`).
-4. Close the MCM. Press the **PrintScreen** key (the actual PrtScn key, which is the default) to take a shot.
+1. Launch through SKSE. You'll see "PrintScreen 5.03 initialized (event-driven)" the first time, and "PrintScreen 5.03 re-initialized" on every later load.
+2. Open the MCM (Escape, then Mod Configuration) and find PrintScreen.
+3. On the Settings page, set **Path**. It has to be a full path such as `D:/Skyrim/Shots`, not a relative one. The folder is created if it doesn't exist.
+4. Set **Select Take Photo Key** to a key nothing else uses.
+5. Close the menu. Your settings are written to disk at that point.
+6. Press the key.
 
-You get a notification when the capture finishes, and a counter of shots taken. Press the hotkey again while a capture is running to cancel it. During animated and video captures, opening any pause menu (inventory, map, journal) cancels the capture too.
+You get "Taking screenshot..." right away and "Screenshot saved! Total: N" when the file is written. The count resets each session.
 
-The hotkey does not fire while a menu is open, while text input is active, or within 0.75 seconds of the last press. If the key ever stops responding, loading a save or closing the MCM re-arms it.
+---
+
+## Taking a capture
+
+Press the key once to start. What happens next depends on the format:
+
+- A still is grabbed in a fraction of a second. The HUD comes back as soon as the frame is captured, before the file is even encoded.
+- An animation records for the duration you set, with the HUD hidden the whole time. The HUD returns when recording stops, and the file is assembled after that. Assembling a long APNG can take a while.
+- A video records for the duration you set, encoding as it goes. The HUD stays hidden until the recording ends.
+
+Press the key again during a capture to cancel it. Cancelling a video keeps what was recorded so far as a playable MP4 when possible.
+
+While a capture is running with **Automatic Menu Removal** on, opening almost any menu cancels it. Inventory, map, journal, dialogue, a container, the favourites menu, all of them. The console is the exception; it doesn't cancel anything. If you'd rather menus didn't cancel captures, turn that toggle off, but then the HUD isn't hidden either.
+
+The key is ignored while any menu is open, while you're typing in a text box, and for three quarters of a second after the last press.
+
+### The settings summary spell
+
+The ESP adds a spell called **PS_Configuration**. Casting it pops up a message box listing your current format, path, hotkey, and shot count. It's a quick way to check what's set without opening the MCM.
 
 ---
 
 ## The MCM
 
-The menu has two pages. The splash screen picks one of six sample shots at random; that is just decoration.
+Two pages. The blank landing page shows one of six sample screenshots picked at random.
 
 ### Settings page
 
-**Path** — where captures are written. Absolute path, no illegal characters. If the path is longer than 30 characters the MCM stops offering the text box and tells you to edit the JSON file directly; long paths are awkward to type in the MCM's input widget, not broken.
+**Path**. Where captures are written. If the path is longer than 30 characters the text box is disabled and the menu tells you to edit the settings file instead. The MCM's input widget is awkward for long strings, that's all.
 
-**Select Image File Type** — one of PNG, APNG, BMP, TIF, JPG, GIF, AGIF, DDS, H264. Choosing a type enables the settings that apply to it, and the rest stay greyed out.
+**Select Image File Type**. PNG, APNG, BMP, TIF, JPG, GIF, AGIF, DDS, or H264. Picking a type enables the options that apply to it and greys out the rest. H264 is configured on the second page.
 
-**Automatic Menu Removal** — hides the entire HUD and all menus during the capture, the same thing the console `tm` command does, then puts everything back.
+**Automatic Menu Removal**. Hides the HUD and every menu during capture, the same way the `tm` console command does, then puts them back. On by default. This toggle also decides whether opening a menu cancels a capture.
 
-**Select Take Photo Key** — click it and press any key. Keys already claimed by another control are refused.
+**Select Take Photo Key**. Click it and press a key. Keys already used by a game control are refused.
 
-**Save/Restore Configuration** — when on (the default), your settings persist to `Data\SKSE\Plugins\StorageUtilData\PrintScreen.json` whenever you close the MCM, and load again on game start. Leave it on unless you want settings reset to defaults every session.
+**Save/Restore Configuration**. On by default. When on, your settings are written to the settings file whenever you close the MCM and read back on game start. Turn it off only if you want every session to start from defaults.
 
-The remaining sliders and dropdowns belong to specific formats:
+The rest of the page is format-specific:
 
-| Setting | Applies to | Range | Default |
-|---------|-----------|-------|---------|
-| JPG Compression | JPG | 0–100 | 90 |
-| PNG Compression | PNG | 0–9 (zlib level) | 9 |
-| Quality | APNG, AGIF | 0–100% | 85% |
-| Capture Duration | APNG, AGIF | 1–15 seconds | 5 |
-| FPS | APNG, AGIF | 1–30 | 15 |
-| Loop Count | APNG, AGIF | 0–10 (0 = loops forever) | 0 |
-| Optimize | APNG, AGIF | 0/1 | 1 |
-| Delta Mode | APNG, AGIF | 0, 1, or 2 | 0 |
-| Tif Compression Mode | TIF | UNCOMPRESSED, RLE, LZW, ZIP | UNCOMPRESSED |
-| DDS Mode | DDS | see below | UNCOMPRESSED |
+| Option | Applies to | Range | Default | Notes |
+|--------|-----------|-------|---------|-------|
+| JPG Compression | JPG | 0 to 100 | 90 | Higher is better quality and a bigger file |
+| PNG Compression | PNG | 0 to 9 | 9 | 0 to 2 skip PNG filtering for speed; 3 and up use adaptive filtering, which compresses better. There's no difference between 3 and 9 |
+| Capture Duration | AGIF, APNG | 1 to 30 s | 5 | Anything over 15 is cut to 15 |
+| FPS | AGIF, APNG | 1 to 30 | 15 | Values below 15 are reset to 10 the next time the file is loaded. See "Things to know" |
+| Loop Count | AGIF, APNG | 0 to 10 | 0 | 0 loops forever |
+| Delta Mode | AGIF, APNG | 0, 1, 2 | 0 | Explained below |
+| Tif Compression Mode | TIF | UNCOMPRESSED, RLE, LZW, ZIP | UNCOMPRESSED | LZW is a safe choice for lossless, smaller files |
+| DDS Mode | DDS | see below | UNCOMPRESSED | |
 
-The duration slider goes up to 30, but animated captures are capped at 15 seconds. If you set 20 and switch image type, you will get a notification that it was clamped to 15. The cap exists because every frame of an animated capture is held before encoding, and 15 seconds is already a lot of frames.
+**Delta Mode** decides how animation frames are stored:
 
-**Delta Mode** controls how animation frames are stored:
+- 0 stores every frame whole. Largest files, nothing can go wrong.
+- 1 stores only the rectangle that changed since the previous frame. Much smaller for scenes where most of the picture holds still.
+- 2 is like 1, but pixels that didn't change inside that rectangle are made transparent. Smallest files for slow, subtle motion.
 
-- 0 — every frame stored whole. Biggest files, no artifacts possible.
-- 1 — only the changed rectangle of each frame is stored. Much smaller files for mostly-still scenes.
-- 2 — pixel-level differences between frames, with transparency for unchanged pixels. Best compression for slow, subtle motion.
+A note on Skyrim specifically: temporal anti-aliasing, film grain, and moving light touch nearly every pixel every frame. Delta modes help most in still scenes with a small moving subject. Try 1 first.
 
-**DDS modes:** UNCOMPRESSED, BC1 through BC5, BC6h, and three speeds of BC7. BC1 is fine for opaque textures. BC6h and BC7 variants take several minutes to compress. That is not a hang, it is the codec. Plan accordingly before capturing a batch of them.
+**DDS modes**: UNCOMPRESSED, BC1, BC2, BC3, BC4, BC5, BC6h, BC7_SLOW, BC7_NORMAL, BC7_FAST. Two things to know. First, "UNCOMPRESSED" doesn't actually produce an uncompressed file; the plugin treats it as BC1. Second, BC6h and BC7_SLOW compress on the CPU and can take a minute or more per screenshot. The HUD comes back immediately; only the file write is slow. BC7_NORMAL and BC7_FAST use the quick BC7 path and are far faster.
 
 ### Video Settings page
 
-Everything on this page is greyed out until the image type is H264. Video and image settings live apart because they do not share units or defaults.
+Everything here is greyed out unless the image type is H264.
 
-Capture group:
+Capture:
 
-- **Duration (seconds)** — 1 to 120. Default 10.
-- **Target Resolution** — Native, 720p, 1080p, 1440p, or 4K. Output is scaled on the GPU, preserving aspect ratio with letterboxing if needed. Native means no scaling.
-- **Frame Rate** — 30 or 60. At 60 you record twice the frames, so expect roughly double the file size.
+- **Duration (seconds)**: 1 to 120, default 10.
+- **Target Resolution**: Native, 720p, 1080p, 1440p, or 4K. Output is scaled on the GPU with the aspect ratio preserved, so a widescreen desktop into a 16:9 target gets black bars. Native means no scaling. If your screen is already smaller than the target, no scaling happens either.
+- **Frame Rate**: 30 or 60. 60 doubles the frame count and roughly doubles the file size.
 
-Encoding group:
+Encoding:
 
-- **Quality Preset** — Low, Medium, High, Very High, or Custom. The presets set the bitrate for you. Custom unlocks the bitrate slider. Default High.
-- **Bitrate (kbps)** — 1000 to 50000. Only active with the Custom preset, and ignored when rate control is CQP.
-- **Keyframe Interval (seconds)** — 0.5 to 10. How often a full frame is stored. Lower means better seeking in a video player but a larger file. Default 2.
-- **Encoder Preference** — Auto, Prefer Hardware, or Force Software. Auto picks the GPU encoder if there is one (NVIDIA NVENC, AMD AMF, Intel QuickSync, all through Windows Media Foundation) and falls back to software otherwise. If a hardware encoder misbehaves, Force Software sidesteps it at the cost of CPU time.
-- **Rate Control** — CBR (constant bitrate, predictable file size), VBR (variable, best quality per byte, the default), CQP (constant quality; you set the target, the file size is what it is).
-- **Container** — MP4. MKV may arrive in a future version.
+- **Quality Preset**: Low, Medium, High, Very High, or Custom. Presets set the bitrate for you: 4, 8, 16, and 35 Mbps respectively. Custom unlocks the slider. Default High.
+- **Bitrate (kbps)**: 1000 to 50000. Only active with the Custom preset, and ignored entirely when Rate Control is CQP.
+- **Keyframe Interval (s)**: 0.5 to 10, default 2. How often a complete frame is written. Shorter means smoother seeking in a player and a bigger file.
+- **Encoder Preference**: Auto, Prefer Hardware, or Force Software. Auto uses your GPU's encoder if Windows can find one (NVIDIA, AMD, and Intel all provide one through Media Foundation) and falls back to software if not. Force Software avoids the GPU encoder entirely. Prefer Hardware currently behaves the same as Auto.
+- **Rate Control**: CBR holds a constant bitrate, so file size is predictable. VBR (the default) lets the bitrate vary and gives the best quality for the size. CQP targets a fixed quality level and the file is whatever size that takes. The quality level for CQP is fixed at 70 and isn't adjustable from the menu.
+- **Container**: MP4 only.
 
-One property of this recorder worth knowing: frames are encoded as they are captured and streamed to disk. A 120-second capture uses about the same memory as a 5-second one.
-
----
-
-## File formats, in one table
-
-| Type | Extension | Use it for | Watch out for |
-|------|-----------|-----------|---------------|
-| PNG | .png | Default stills, editing, EXIF | zlib level 0–9 |
-| JPG | .jpg | Small files, quick sharing | Lossy, quality 0–100 |
-| BMP | .bmp | Raw pixels | Large, no compression |
-| TIF | .tif | Editing pipelines | Compression mode applies |
-| DDS | .dds | Texture work | BC6h/BC7 take minutes |
-| GIF | .gif | Static 256-color image | Not animated |
-| AGIF | .gif | Animation, small size | 256 colors |
-| APNG | .png | Animation, full color | Larger than AGIF |
-| H264 | .mp4 | Video | See Video Settings |
-
-Yes, plain GIF is a single frame in V5. If you want the animation, pick AGIF.
+Video frames are encoded as they're captured and streamed straight to the file, so a two-minute recording uses no more memory than a five-second one.
 
 ---
 
-## The two configuration files
+## Formats at a glance
 
-### The JSON file (your settings)
+| Type | Extension | Good for | Keep in mind |
+|------|-----------|----------|--------------|
+| PNG | .png | Everyday screenshots, editing, panorama stitching | Also writes a small `.png.json` companion file with the camera data |
+| JPG | .jpg | Small files, sharing | Lossy. Carries EXIF camera data |
+| BMP | .bmp | Raw pixels | Big. No metadata |
+| TIF | .tif | Editing workflows | Pick a compression mode or it's as big as a BMP |
+| DDS | .dds | Texture work | UNCOMPRESSED is really BC1. BC6h and BC7_SLOW are slow |
+| GIF | .gif | A 256-colour still | Not animated. Use AGIF for that |
+| AGIF | .gif | Short looping clips | 256 colours from a single palette |
+| APNG | .png | Full-colour clips | Bigger than AGIF. Every frame is held in memory while the file is built |
+| H264 | .mp4 | Video | See the Video Settings page |
 
-`Data\SKSE\Plugins\StorageUtilData\PrintScreen.json`
+Files are named `SS_` followed by the date and time down to the millisecond, for example `SS_20260913_143022_417.png`.
 
-The mod owns this file. It is written when you close the MCM and read on game start. If it is missing or corrupt, the mod notices, tells you, and writes a fresh one with defaults. Hand-editing works, but every value is validated on load, and anything invalid quietly reverts to its default with a notification. Typos in key names mean the value is simply ignored.
+---
 
-One historical note: the archive ships a PrintScreen.json from an older test setup. On first launch it fails the completeness check and is rewritten with clean defaults. That is expected, not a bug.
+## Camera metadata for panorama stitching
 
-### The INI file (diagnostics)
+When you take a still, the plugin reads the game's current field of view (first-person FOV in first person, world FOV otherwise) and converts it to a 35 mm equivalent focal length. Then:
 
-`Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini`
+- JPGs get that written into standard EXIF fields (FocalLength and FocalLengthIn35mmFormat), plus Make, Model, and Software tags.
+- PNGs get a companion file named `<screenshot>.png.json` alongside the image containing the focal length, FOV, and image size. PNG doesn't have a reliable EXIF slot through the Windows encoder, so the companion file is the dependable route.
+- BMP gets nothing. TIF, GIF, and DDS shouldn't be relied on for this either.
 
-This file is optional and is not created for you. It controls logging and encoder threading, nothing else. If it does not exist, the defaults below apply.
+Stitching tools that read EXIF, or PhotoFileMerge V2 which reads the companion file, can then line up shots without you typing in a focal length. If the FOV can't be read at capture time, the metadata is left out and the screenshot is otherwise normal.
+
+The conversion assumes the game's FOV value is the horizontal field of view. If you've changed the FOV with the console `fov` command, that's the value that gets used.
+
+---
+
+## The files PrintScreen uses
+
+### Settings: `Data\SKSE\Plugins\StorageUtilData\PrintScreen.json`
+
+The plugin owns this file. It's written when you close the MCM and read when the game starts. If it's missing or unreadable, a fresh one with defaults is written and you get a notification. You can edit it by hand between sessions. Every value is checked on load, and anything out of range is quietly put back to its default, usually with a notification so you know.
+
+Keys are stored in lower case. A file left over from V4's PapyrusUtil layout, with values nested under `int`, `float`, and `string`, is converted on first read.
+
+### Diagnostics: `Documents\My Games\Skyrim Special Edition\SKSE\PrintScreen.ini`
+
+Optional. The plugin never creates it. It only controls logging; there's nothing in it you need for normal use. If you create one, these are the settings and their defaults:
 
 ```ini
 [Logging]
@@ -188,63 +226,64 @@ LogCaptureProgress=false
 LogTimingInfo=false
 ```
 
-- **LogLevel** — NONE, ERROR, WARN, INFO (default), DEBUG, or TRACE, or the numbers 0–5. Use INFO normally, DEBUG when reporting a bug, TRACE never unless you enjoy enormous files.
-- **ConsoleOutput** — also echo the log to the in-game console.
-- **FileOutput** — write the log file.
-- **ShowTimestamps** — timestamp each line.
-- **MaxLogFileSizeMB** — 1 to 50. The log rotates when it hits this size.
-- **ParallelCompression** — compress PNGs with multiple threads.
-- **CompressionThreads** — how many threads, 0 meaning auto-detect.
-- **LogCaptureProgress** / **LogTimingInfo** — per-frame progress and timing lines in the log. Off by default, on when you are benchmarking.
+`LogLevel` accepts NONE, ERROR, WARN, INFO, DEBUG, or TRACE, or the numbers 0 to 5. INFO is right for normal play. DEBUG is what to use when you're reporting a bug. `ConsoleOutput` sends log lines to a debugger if one is attached; it doesn't write to the in-game console. The `[Performance]` and `[Capture]` keys are read but nothing currently acts on them.
 
-A legacy flat-format INI from V2 (`SKSE\Plugins\Printscreen_Log.ini`) is still read if present. Unrecognized keys produce a warning in the log rather than a crash.
+If you happen to have a V2-era file at `SKSE\Plugins\Printscreen_Log.ini`, that one is read instead. Unknown keys are reported in the log, not treated as errors.
 
-### The log
+### The log: `Documents\My Games\Skyrim Special Edition\SKSE\Logs\Printscreen.log`
 
-`Documents\My Games\Skyrim Special Edition\SKSE\Logs\Printscreen.log`
-
-This is the first place to look when something misbehaves. It records plugin startup, runtime version, encoder selection, capture progress, and every warning. If you report a bug, attach this file.
+Look here first when something's wrong. It records startup, the game version, which encoder was chosen for video, every capture, and every warning. It rolls over at 8 MB (three files are kept). Attach it to any bug report.
 
 ---
 
-## EXIF metadata: screenshots that know their focal length
+## Things to know
 
-Every PNG and JPEG still gets EXIF fields written into it, recording the camera FOV at the instant of capture and the 35mm-equivalent focal length that follows from it (first person uses the first-person FOV, third person the world FOV).
+**It captures a monitor, not the game window.** Desktop duplication grabs the first monitor attached to your primary graphics card. If Skyrim is running on a different monitor, you'll get the wrong screen. Windows also blanks any content it considers protected (some video players) in duplicated output.
 
-The point of this is stitching. Panorama tools need a focal length to line up images. Tools that read EXIF, PhotoFileMerge V2 among them, get it from the file and never ask you. If the FOV could not be read at capture time, the metadata is simply left out, and the shot is unaffected.
+**Animations are capped at 15 seconds.** Frames are staged to disk during recording and then read back to build the file. For APNG every frame is loaded into memory at once, and 15 seconds at 30 fps of a 4K desktop is already a lot. The slider goes to 30 for historical reasons; anything higher than 15 is clamped, and you'll get a notification saying so when you change image type.
+
+**An animation FPS below 15 won't stick.** The settings check on load resets any value under 15 to 10. So 12 becomes 10, and 6 becomes 10. Values from 15 up are kept as you set them.
+
+**The Quality and Optimize sliders are gone.** Earlier V5 builds showed them for animated captures, but neither one did anything. If your settings file still has `quality` or `optimize` entries from those builds, they're ignored.
+
+**A temporary folder appears during animated captures.** It's created inside your output folder, named `gif_temp_` or `apng_temp_` followed by a timestamp, and holds one BMP per frame. It's deleted when the file is finished. If the game crashes mid-capture, the folder is removed on your next load, or on your next animated capture into the same folder, whichever comes first.
+
+**A cancelled video is usually still playable.** The plugin closes the file properly with whatever frames it had. A crash is different: the MP4 won't have its index written and no player will open it. There's no repair for that.
 
 ---
 
 ## Troubleshooting
 
-**No files appear.** Check the Path setting first, then the log. The path is validated when you type it: it must be absolute, and the mod must be able to create and write in it.
+**Nothing appears in my folder.** Check **Path** in the MCM. Remember the shipped settings file points at `C:/pictures/test/vanilla`. Then check the log.
 
-**The hotkey does nothing.** Confirm which key is bound in the MCM, it might not be the one you think. The key is suppressed while any menu is open, while text input is active, and for 0.75 seconds after a press. If it stays dead, load a save or open and close the MCM; both re-register the key.
+**The hotkey does nothing.** Confirm which key is bound. It might be Right Shift from the shipped settings rather than what you expected. The key is suppressed while any menu is open and while a text field has focus. If it's still dead, load a save or open and close the MCM; both re-register it.
 
-**The capture cancels itself when I open my inventory.** Intended. Opening a pause or input menu during an animated or video capture cancels it, because nine times out of ten you did not mean to keep recording. For stills there is nothing to interrupt.
+**Opening my inventory cancels the capture.** Intended, while Automatic Menu Removal is on. Turn the toggle off if you want to record through menus, at the cost of the HUD showing in the capture.
 
-**The HUD shows up in my shots.** Something is forcing menus on. PrintScreen hides the UI through the same flag as the `tm` console command; if `tm` does not hide it in your load order, PrintScreen cannot either. (The 5.0.0 and 5.0.1 releases had a settings bug where this toggle did not affect captures; 5.0.2 fixes it.)
+**The HUD is in my screenshot.** Either Automatic Menu Removal is off, or something in your load order is forcing menus back on. PrintScreen uses the same switch as the `tm` console command; if `tm` doesn't hide your HUD, PrintScreen can't either.
 
-**The capture finished but I never got a notification, and the next key press says "Cancelling...".** This was an event-matching defect in 5.0.0 (the file itself saved fine). 5.0.1 and later match completion events by capture number and add a watchdog that clears the stuck state, confirmed working in 5.0.2; if you still see it, report it with the Papyrus log.
+**A DDS capture takes forever.** BC6h and BC7_SLOW are CPU compressors that run at seconds per frame. You can keep playing; only the file write is slow. Use BC7_FAST or BC1 unless you need the quality.
 
-**DDS captures take forever.** BC6h and BC7 compress on the CPU at seconds per frame, not milliseconds. The UI comes back as soon as the frame is grabbed; only the encoding is slow. Pick BC1 or BC7_FAST when you do not need the quality.
+**"Capture: finished, but no completion report was received."** The plugin finished but the completion message never reached the script. The file is almost certainly fine. If you see this repeatedly, report it with both `Printscreen.log` and the Papyrus log.
 
-**My MP4 will not play.** The file needs its finalization step to be playable. A crash or forced quit mid-recording leaves it unplayable, and there is no repair for that file. Recordings that complete normally are fine.
+**Video won't start.** Check the log for the encoder line. If you set Encoder Preference to Prefer Hardware on a machine without a GPU encoder, switch to Auto. If Auto also fails, try Force Software.
 
-**Screenshots include my second monitor.** Desktop-level capture. Crop afterward, or accept it.
+**The animation flickers or has black blotches.** Set Delta Mode to 0 and try again. If that fixes it, report it with the settings you were using.
 
 ---
 
 ## Compatibility
 
-Safe alongside ENB, ReShade, Steam/Discord/NVIDIA overlays, and other SKSE plugins that do not register the same Papyrus function names. Real conflicts are rare; the ones that exist are with other screenshot mods shipping scripts named `Printscreen_*`, which is a load-order problem no setting can fix.
+Works alongside ENB, ReShade, Steam and Discord overlays, and other SKSE plugins. The only real conflict is another mod that ships scripts named `Printscreen_*`, which is a load-order problem no setting can solve.
 
 ---
 
 ## License
 
-PrintScreen V5 is GPL-3.0-or-later. Every binary release is accompanied by a corresponding-source bundle on the matching GitHub release, containing the full source of the plugin and every statically linked dependency. Releases up to 4.x were MIT and remain available under those terms.
+PrintScreen V5 is GPL-3.0-or-later. Every release on Nexus or GitHub is accompanied by a corresponding-source bundle on the matching GitHub release, containing the plugin source and the source of every statically linked library. Releases up to 4.x were MIT and remain available on those terms.
+
+Source: https://github.com/Bill-Lea/Printscreenv5
 
 ---
 
-*For the architecture, threading model, and Papyrus API, see the [technical reference](PrintScreenV5_TechnicalReference.md).*
+*For how it works inside, see the [technical reference](PrintScreenV5_TechnicalReference.md).*

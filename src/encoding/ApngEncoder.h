@@ -36,7 +36,6 @@ public:
         float                            fps,
         int                              loopCount,
         int                              deltaMode,
-        int                              optimize,
         CancellationToken::Ptr           token);
 
 private:
