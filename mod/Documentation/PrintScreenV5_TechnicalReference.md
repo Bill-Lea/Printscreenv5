@@ -1,11 +1,11 @@
 # PrintScreen V5 Technical Reference
 
-Version 5.0.2
+Version 5.0.3
 Author: William G Lea
 SKSE plugin for Skyrim Special Edition and Anniversary Edition
 Windows 10/11, Direct3D 11, CommonLibSSE-NG 6.4.0
 
-This document describes the plugin as the code stands at tag v5.0.2. Where the code and the previous documentation disagreed, the code won. Anything surprising is listed under "Known issues" at the end rather than glossed over.
+This document describes the plugin as the code stands at 5.0.3. Where the code and the previous documentation disagreed, the code won. Anything surprising is listed under "Known issues" at the end rather than glossed over.
 
 ---
 
@@ -508,7 +508,7 @@ Cancellation: `CancellationToken` is a shared atomic. `ThrowIfCancelled(stage)` 
 
 ## 16. Known issues
 
-Verified against the v5.0.2 source. None of these are hidden from users; the user guide says what it needs to.
+Verified against the 5.0.3 source. None of these are hidden from users; the user guide says what it needs to.
 
 Behaviour that differs from what the MCM implies:
 
@@ -523,7 +523,7 @@ Behaviour that differs from what the MCM implies:
 
 Cosmetic or inert:
 
-9. Version strings disagree: `kPluginVersion` 5.0.2, MainQuest `Version` "5.02", `plugin.cpp` logs "v4.0 refactored", EXIF `Model`/`Software` say "PrintScreen V4", and the two uncompiled `.rc` files say 4.0.0 and 5.0.0.
+9. Version strings disagree: `kPluginVersion` 5.0.3, MainQuest `Version` "5.03", `plugin.cpp` logs "v4.0 refactored", EXIF `Model`/`Software` say "PrintScreen V4", and the two uncompiled `.rc` files say 4.0.0 and 5.0.0.
 10. `SaveAndHideAllUI` and `RestoreAllUI` are declared in `printscreen_formula_script.psc` but not registered.
 11. `TakePhoto_Internal_Json` and `ParseRequestJson` form a JSON-string capture entry point that isn't bound to any Papyrus name. Its clamps also differ slightly from `BuildRequest` (encoder and rate control allow 0 to 4).
 12. `RecalculateFPS()` in the MainQuest script is never called.
