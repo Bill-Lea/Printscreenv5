@@ -242,6 +242,8 @@ Those query paths are the JPEG APP1 layout. Individual `SetMetadataByName` resul
 5. `GifEncoder::EncodeFromFiles` or `ApngEncoder::EncodeFromFiles`.
 6. `tempGuard.Cleanup()`, which removes the whole directory tree and only disarms the guard once the directory is confirmed gone. A locked file (antivirus, indexer) means the destructor retries, and failing that the directory stays registered for the next-load sweep.
 
+Both `EncodeFromFiles` entry points log the frame count, fps, loop count, and delta mode they received, so the log shows which mode a given file was made with.
+
 Earlier V5 builds carried an `optimize` argument through this path and a `Quality` property on the Papyrus side. Neither was used by any encoder (Delta Mode 2 is what "optimize" once meant), and both were removed after 5.0.2. Old settings files may still contain `optimize` and `quality` keys; the JSON layer ignores keys it isn't asked for.
 
 ### 8.1 GifEncoder (animated)

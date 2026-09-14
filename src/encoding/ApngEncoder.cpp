@@ -423,7 +423,8 @@ EncodeResult ApngEncoder::EncodeFromFiles(
     int deltaMode,
     CancellationToken::Ptr token)
 {
-    logger::info("ApngEncoder::EncodeFromFiles: {} frames", framePaths.size());
+    logger::info("ApngEncoder::EncodeFromFiles: {} frames, fps={}, loopCount={}, deltaMode={}",
+                 framePaths.size(), fps, loopCount, deltaMode);
     if (framePaths.empty()) return EncodeResult::Fail("No frame files");
 
     // Load all frames then delegate to EncodeSequence
