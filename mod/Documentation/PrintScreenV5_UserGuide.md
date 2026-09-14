@@ -59,14 +59,9 @@ For a manual install, these go under your `Data` folder:
 
 Enable the ESP and start the game through SKSE.
 
-### Check two settings before your first shot
+### Defaults on a fresh install
 
-The settings file that ships in the archive came from a test machine. It loads fine, but it sets two things you almost certainly want to change:
-
-- The output folder is `C:/pictures/test/vanilla`. The plugin will create that folder and happily fill it.
-- The hotkey is Right Shift.
-
-Open the MCM, set **Path** to where you want your screenshots, and pick a key you like. Both are saved when you close the menu.
+The settings file in the archive holds plain defaults: screenshots go to `C:/Pictures` as PNG, and the hotkey is Backspace. Open the MCM, set **Path** to where you want your screenshots, and pick a key you like. Both are saved when you close the menu.
 
 ---
 
@@ -254,9 +249,9 @@ Look here first when something's wrong. It records startup, the game version, wh
 
 ## Troubleshooting
 
-**Nothing appears in my folder.** Check **Path** in the MCM. Remember the shipped settings file points at `C:/pictures/test/vanilla`. Then check the log.
+**Nothing appears in my folder.** Check **Path** in the MCM. On a fresh install it's `C:/Pictures`. Then check the log.
 
-**The hotkey does nothing.** Confirm which key is bound. It might be Right Shift from the shipped settings rather than what you expected. The key is suppressed while any menu is open and while a text field has focus. If it's still dead, load a save or open and close the MCM; both re-register it.
+**The hotkey does nothing.** Confirm which key is bound; Backspace is the default. The key is suppressed while any menu is open and while a text field has focus. If it's still dead, load a save or open and close the MCM; both re-register it.
 
 **Opening my inventory cancels the capture.** Intended, while Automatic Menu Removal is on. Turn the toggle off if you want to record through menus, at the cost of the HUD showing in the capture.
 
