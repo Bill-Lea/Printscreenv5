@@ -186,7 +186,7 @@ When you take a still, the plugin reads the game's current field of view (first-
 - PNGs get a companion file named `<screenshot>.png.json` alongside the image containing the focal length, FOV, and image size. PNG doesn't have a reliable EXIF slot through the Windows encoder, so the companion file is the dependable route.
 - BMP gets nothing. TIF, GIF, and DDS shouldn't be relied on for this either.
 
-Stitching tools that read EXIF, or PhotoFileMerge V2 which reads the companion file, can then line up shots without you typing in a focal length. If the FOV can't be read at capture time, the metadata is left out and the screenshot is otherwise normal.
+Stitching tools that read EXIF, or PhotoFileMerge V2 (pthotFileMerge V2 /V3 are not a part of any Skyrim Mod -- it has not been published)  which reads the companion file, can then line up shots without you typing in a focal length. If the FOV can't be read at capture time, the metadata is left out and the screenshot is otherwise normal.
 
 The conversion assumes the game's FOV value is the horizontal field of view. If you've changed the FOV with the console `fov` command, that's the value that gets used.
 
