@@ -1,6 +1,6 @@
 # PrintScreen V5 User Guide
 
-Version 5.0.3
+Version 5.0.4
 Author: William G Lea
 For Skyrim Special Edition and Anniversary Edition (SKSE64 plugin)
 Windows 10 or 11
@@ -67,7 +67,7 @@ The settings file in the archive holds plain defaults: screenshots go to `C:/Pic
 
 ## Quick start
 
-1. Launch through SKSE. You'll see "PrintScreen 5.03 initialized (event-driven)" the first time, and "PrintScreen 5.03 re-initialized" on every later load.
+1. Launch through SKSE. You'll see "PrintScreen 5.04 initialized (event-driven)" the first time, and "PrintScreen 5.04 re-initialized" on every later load.
 2. Open the MCM (Escape, then Mod Configuration) and find PrintScreen.
 3. On the Settings page, set **Path**. It has to be a full path such as `D:/Skyrim/Shots`, not a relative one. The folder is created if it doesn't exist.
 4. Set **Select Take Photo Key** to a key nothing else uses.
