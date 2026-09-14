@@ -424,7 +424,7 @@ Written by `WriteJson()` on MCM close (when `UseJsonFile` is on), read by `ReadJ
 | menu | int | 1 | absent means true |
 | key_takephoto | int | 14 (Backspace) | must be in `Printscreen_MAP_script`, else 14 |
 
-The `PrintScreen.json` in `mod/` is a leftover from a test setup. It's in the mixed layout the migrator handles, and after migration it passes the completeness check, so it is loaded rather than replaced. Its effective values are path `C:/pictures/test/vanilla`, key 54 (Right Shift), TIFF mode LZW. See Known issues.
+The `PrintScreen.json` shipped in `mod/` is a flat, lower-case file holding exactly these 22 keys at their property defaults. Releases up to 5.0.3 shipped a leftover test-machine file instead (path `C:/pictures/test/vanilla`, Right Shift as the hotkey) that survived migration and validation and was loaded as-is.
 
 ### 12.4 Completion protocol
 
@@ -514,26 +514,24 @@ Verified against the 5.0.3 source. None of these are hidden from users; the user
 
 Behaviour that differs from what the MCM implies:
 
-1. **Shipped settings file.** `mod/SKSE/Plugins/StorageUtilData/PrintScreen.json` survives migration and validation, so a fresh install writes to `C:/pictures/test/vanilla` with Right Shift as the hotkey. It should be replaced with a file of property defaults, or removed so `OnInit` generates one.
-2. **DDS "UNCOMPRESSED" produces BC1.** `ParseDDSMode` defaults to BC1 and `SaveDDS` has no uncompressed branch. BC7_NORMAL and BC7_FAST are identical.
-3. **PNG compression 3 to 9 are identical.** WIC exposes only the filter method; the slider selects none (0 to 2) or adaptive (3 to 9).
-4. **`Validate_Fps` resets any value under 15 to 10.** The MCM slider's own default button says 10, the property default is 15.
-5. **The single `Mode` string serves both TIFF and DDS.** Choosing a DDS mode and then switching to TIF leaves `Mode` set to a DDS name, which the TIFF parser reads as NONE. The reverse gives BC1.
-6. **The animated duration slider runs to 30** while both Papyrus and C++ clamp to 15.
-7. **`Validate_RateControl` resets invalid values to 0 (CBR)** rather than the default 1; `Validate_VideoDuration` resets to 15 rather than 10. Cosmetic.
-8. **Only output 0 of adapter 0 is captured.** No monitor selection.
+1. **DDS "UNCOMPRESSED" produces BC1.** `ParseDDSMode` defaults to BC1 and `SaveDDS` has no uncompressed branch. BC7_NORMAL and BC7_FAST are identical.
+2. **PNG compression 3 to 9 are identical.** WIC exposes only the filter method; the slider selects none (0 to 2) or adaptive (3 to 9).
+3. **`Validate_Fps` resets any value under 15 to 10.** The MCM slider's own default button says 10, the property default is 15.
+4. **The single `Mode` string serves both TIFF and DDS.** Choosing a DDS mode and then switching to TIF leaves `Mode` set to a DDS name, which the TIFF parser reads as NONE. The reverse gives BC1.
+5. **The animated duration slider runs to 30** while both Papyrus and C++ clamp to 15.
+6. **`Validate_RateControl` resets invalid values to 0 (CBR)** rather than the default 1; `Validate_VideoDuration` resets to 15 rather than 10. Cosmetic.
+7. **Only output 0 of adapter 0 is captured.** No monitor selection.
 
 Cosmetic or inert:
 
-9. Version strings disagree: `kPluginVersion` 5.0.3, MainQuest `Version` "5.03", `plugin.cpp` logs "v4.0 refactored", EXIF `Model`/`Software` say "PrintScreen V4", and the two uncompiled `.rc` files say 4.0.0 and 5.0.0.
-10. `SaveAndHideAllUI` and `RestoreAllUI` are declared in `printscreen_formula_script.psc` but not registered.
-11. `TakePhoto_Internal_Json` and `ParseRequestJson` form a JSON-string capture entry point that isn't bound to any Papyrus name. Its clamps also differ slightly from `BuildRequest` (encoder and rate control allow 0 to 4).
-12. `RecalculateFPS()` in the MainQuest script is never called.
-13. `IsGamePaused` is registered and cached but no shipped script calls it; `OnKeyUp` uses `Utility.IsInMenuMode()` instead.
-14. `Printscreen_MAP_script.GetKeyName(183)` returns "0" for the PrintScreen key. The key still validates and works; only the summary spell's message box shows the wrong name.
-15. `src/IniConfiguration.md` describes `[General]`, `DefaultFormat`, `DefaultQuality`, `ReloadConfig()`, and auto-creation of the INI. None of that exists. The `[Performance]` and `[Capture]` keys that do parse aren't consulted.
-16. `mod/SKSE/Plugins/StorageUtilData/PrintScreenConfig.json` is read by nothing.
-17. `Native/README_INTEGRATION.txt` describes the V4-era integration steps and is out of date.
+8. Version strings disagree: `kPluginVersion` 5.0.3, MainQuest `Version` "5.03", `plugin.cpp` logs "v4.0 refactored", EXIF `Model`/`Software` say "PrintScreen V4", and the two uncompiled `.rc` files say 4.0.0 and 5.0.0.
+9. `SaveAndHideAllUI` and `RestoreAllUI` are declared in `printscreen_formula_script.psc` but not registered.
+10. `TakePhoto_Internal_Json` and `ParseRequestJson` form a JSON-string capture entry point that isn't bound to any Papyrus name. Its clamps also differ slightly from `BuildRequest` (encoder and rate control allow 0 to 4).
+11. `RecalculateFPS()` in the MainQuest script is never called.
+12. `IsGamePaused` is registered and cached but no shipped script calls it; `OnKeyUp` uses `Utility.IsInMenuMode()` instead.
+13. `Printscreen_MAP_script.GetKeyName(183)` returns "0" for the PrintScreen key. The key still validates and works; only the summary spell's message box shows the wrong name.
+14. `src/IniConfiguration.md` describes `[General]`, `DefaultFormat`, `DefaultQuality`, `ReloadConfig()`, and auto-creation of the INI. None of that exists. The `[Performance]` and `[Capture]` keys that do parse aren't consulted.
+15. `Native/README_INTEGRATION.txt` describes the V4-era integration steps and is out of date.
 
 Limits by design:
 
