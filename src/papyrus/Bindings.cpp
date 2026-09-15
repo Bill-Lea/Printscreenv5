@@ -397,13 +397,18 @@ static std::string TakePhoto(
             int status;
             std::string message;
             ClassifyWorkerResult(r, status, message);
-            QueueModEvent("PrintScreenComplete", seq, status, message,
-                          util::wstring_to_utf8(outputDir));
+            // Put the HUD back BEFORE the completion event is queued. Both
+            // go through the same SKSE task queue in order, so the restore
+            // has run by the time Papyrus receives the event and posts its
+            // "saved" / "cancelled" notification. Video captures restore
+            // nothing mid-capture, so this is the only restore they get.
             MenuEventSink::GetSingleton()->ClearCaptureToken();
             if (autoUI) {
                 RestoreUIAsync();
                 MenuEventSink::GetSingleton()->SetMenusHidden(false);
             }
+            QueueModEvent("PrintScreenComplete", seq, status, message,
+                          util::wstring_to_utf8(outputDir));
         },
         // Acquisition callback — fires after all frames are captured, before encoding.
         // Restores HUD immediately so slow DDS/AGIF/APNG encodes don't suppress UI.

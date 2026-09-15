@@ -88,7 +88,7 @@ Press the key once to start. What happens next depends on the format:
 
 Press the key again during a capture to cancel it. Cancelling a video keeps what was recorded so far as a playable MP4 when possible.
 
-While a capture is running with **Automatic Menu Removal** on, opening almost any menu cancels it. Inventory, map, journal, dialogue, a container, the favourites menu, all of them. The console is the exception; it doesn't cancel anything. If you'd rather menus didn't cancel captures, turn that toggle off, but then the HUD isn't hidden either.
+While a capture is running with **Automatic Menu Removal** on, opening a menu that pauses the game or takes input cancels it. Inventory, map, journal, dialogue, a container, the favourites menu, all of them. The console is the exception; it doesn't cancel anything. Pop-ups that open on their own without pausing the game, such as QuickLoot's loot window or HUD overlay mods, don't cancel a capture; they aren't in the capture anyway because the HUD is hidden. If you'd rather menus didn't cancel captures, turn that toggle off, but then the HUD isn't hidden either.
 
 The key is ignored while any menu is open, while you're typing in a text box, and for three quarters of a second after the last press.
 

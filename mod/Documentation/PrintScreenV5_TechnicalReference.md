@@ -320,7 +320,7 @@ The Scaleform helpers (`SetSubtitlesVisible`, `SetCompassVisible`, `SetHUDAlpha`
 Registered on `kDataLoaded` as a `MenuOpenCloseEvent` sink. Two jobs:
 
 1. Maintain a cached `isPaused_` flag, updated on both open and close of any menu in `kPauseOrInputMenus` or any menu whose flags include `kPausesGame`. `IsGamePaused` (native) returns this. Nothing in the shipped Papyrus calls it.
-2. Cancel captures. Only when `menusHidden_` is true, meaning a capture started with the Menu toggle on. Menus in `kIgnoredMenus` (console, HUD, fader, cursor, loading, tween, and the like) are skipped. For any other menu opening, the sink locks its weak token and cancels. Pause/input menus also restore the UI immediately; other menus leave the restore to the completion callback. If there's no live token it just restores the UI as a safety measure.
+2. Cancel captures. Only when `menusHidden_` is true, meaning a capture started with the Menu toggle on. Menus in `kIgnoredMenus` (console, HUD, fader, cursor, loading, tween, and the like) are skipped. If there's no live token it just restores the UI as a safety measure. Otherwise only a pause/input menu (in `kPauseOrInputMenus` or flagged `kPausesGame`) cancels: the sink locks its weak token, cancels, and restores the UI immediately. Any other menu opening, such as QuickLoot's `LootMenu` or a HUD overlay, is logged and ignored, since it is neither visible in the capture nor an interruption of gameplay; before this rule such popups cut every long video short.
 
 The practical effect: with Automatic Menu Removal off, opening a menu never cancels a capture.
 
