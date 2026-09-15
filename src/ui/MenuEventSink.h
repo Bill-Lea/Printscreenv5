@@ -8,7 +8,10 @@
 // ============================================================
 // MenuEventSink
 // Listens for MenuOpenCloseEvent and cancels an active capture
-// when the player opens a game menu (inventory, map, etc.).
+// when the player opens a game menu that pauses the game or takes
+// input (inventory, map, dialogue, etc.). Menus that open on their
+// own without pausing (QuickLoot's LootMenu, HUD overlays) are left
+// alone so they cannot cut a long video recording short.
 // Holds a *weak* reference to the capture token so expired
 // sessions are silently ignored.
 // ============================================================

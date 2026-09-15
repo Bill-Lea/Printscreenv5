@@ -126,10 +126,7 @@ RE::BSEventNotifyControl MenuEventSink::ProcessEvent(
     if (ShouldIgnoreMenu(event->menuName))
         return RE::BSEventNotifyControl::kContinue;
 
-    // Check if this menu indicates pause or text input
-    const bool isCriticalMenu = pauseMenu;
-
-    // Try to cancel the active capture via the weak token
+    // Look up the active capture via the weak token
     CancellationToken::Ptr tok;
     {
         std::lock_guard lock(tokenMutex_);
@@ -144,16 +141,25 @@ RE::BSEventNotifyControl MenuEventSink::ProcessEvent(
         return RE::BSEventNotifyControl::kContinue;
     }
 
-    if (isCriticalMenu) {
-        logger::warn("MenuEventSink: critical menu '{}' opened during capture — cancelling and restoring UI",
+    // Only a menu that pauses the game or takes input cancels the capture.
+    // Those are the menus the player deliberately opened (inventory, map,
+    // journal, dialogue, a container...). Anything else that opens on its
+    // own while the HUD is hidden — QuickLoot's LootMenu whenever the
+    // crosshair crosses a container, HUD overlay mods and the like — is not
+    // in the capture anyway (showMenus is off) and does not interrupt
+    // gameplay, so it must not interrupt a recording either. Before this
+    // check every such popup silently cut a video short, so the success
+    // notification and the shot counter never fired.
+    if (!pauseMenu) {
+        logger::info("MenuEventSink: menu '{}' opened during capture — non-pausing, capture continues",
                      event->menuName.c_str());
-        tok->Cancel();
-        UIController::GetSingleton().RestoreAllAsync();
-    } else {
-        logger::warn("MenuEventSink: menu '{}' opened during capture — cancelling",
-                     event->menuName.c_str());
-        tok->Cancel();
+        return RE::BSEventNotifyControl::kContinue;
     }
+
+    logger::warn("MenuEventSink: menu '{}' opened during capture — cancelling and restoring UI",
+                 event->menuName.c_str());
+    tok->Cancel();
+    UIController::GetSingleton().RestoreAllAsync();
 
     return RE::BSEventNotifyControl::kContinue;
 }

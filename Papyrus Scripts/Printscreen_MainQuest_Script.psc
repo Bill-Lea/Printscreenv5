@@ -615,7 +615,13 @@ Function OnScreenshotCompleted(String completionResult)
 
     if (completionResult == "Success")
         Shots += 1
-        Debug.Notification("Screenshot saved! Total: " + Shots)
+        if (ImageType == "H264")
+            Debug.Notification("Video saved! Total: " + Shots)
+        elseif (ImageType == "AGIF" || ImageType == "APNG")
+            Debug.Notification("Animation saved! Total: " + Shots)
+        else
+            Debug.Notification("Screenshot saved! Total: " + Shots)
+        endif
     elseif (completionResult == "Cancelled")
         Debug.Notification("Capture cancelled")
     else
