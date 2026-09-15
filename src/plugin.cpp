@@ -10,7 +10,7 @@
 namespace
 {
     constexpr std::string_view kPluginName = "Printscreen"sv;
-    constexpr REL::Version kPluginVersion{ 5, 0, 4 };
+    constexpr REL::Version kPluginVersion{ 5, 0, 5 };
 }
 
 extern "C" __declspec(dllexport)
