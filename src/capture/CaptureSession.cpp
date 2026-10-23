@@ -249,8 +249,8 @@ static std::string RunStill(const CaptureRequest& req, CancellationToken::Ptr to
     exif.imageWidth      = srcImg ? static_cast<int>(srcImg->width)  : 0;
     exif.imageHeight     = srcImg ? static_cast<int>(srcImg->height) : 0;
     exif.cameraMake      = "Skyrim Engine";
-    exif.cameraModel     = "PrintScreen V4";
-    exif.software        = "PrintScreen V4";
+    exif.cameraModel     = "PrintScreen V5";
+    exif.software        = "PrintScreen V5";
 
     std::wstring outPath = MakeOutputPath(req.outputDir, req.format);
     StillEncoder enc(req);

@@ -1,6 +1,6 @@
-# PrintScreen V5 User Guide
+﻿# PrintScreen V5 User Guide
 
-Version 5.0.5
+Version 5.0.6
 Author: William G Lea
 For Skyrim Special Edition and Anniversary Edition (SKSE64 plugin)
 Windows 10 or 11

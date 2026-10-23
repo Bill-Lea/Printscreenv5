@@ -1,0 +1,14 @@
+#pragma once
+
+// Generated from the CMake project(VERSION) — do not edit by hand.
+// Single source of truth for the plugin version.
+
+#include <REL/Version.h>
+
+namespace Printscreen
+{
+    inline constexpr REL::Version kPluginVersion{ @PV_MAJOR@, @PV_MINOR@, @PV_PATCH@, 0 };
+
+    // "5.0.6" as a compile-time string.
+    inline constexpr std::string_view kPluginVersionString = "@PRINTSCREEN_VERSION@";
+}

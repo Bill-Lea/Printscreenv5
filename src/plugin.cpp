@@ -3,6 +3,7 @@
 #include "PCH.h"
 #include "Config.h"
 #include "logger.h"
+#include "VersionInfo.h"
 #include "papyrus/Bindings.h"
 #include "Native/PrintscreenJson.h"
 #include "capture/TempFileGuard.h"
@@ -10,7 +11,7 @@
 namespace
 {
     constexpr std::string_view kPluginName = "Printscreen"sv;
-    constexpr REL::Version kPluginVersion{ 5, 0, 5 };
+    // kPluginVersion comes from the generated VersionInfo.h (CMake project VERSION).
 }
 
 extern "C" __declspec(dllexport)
@@ -21,7 +22,7 @@ bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
     Config::Initialize();
     logger::SetupLog();
 
-    logger::info("Printscreen: SKSEPlugin_Load starting (v4.0 refactored)");
+    logger::info("Printscreen: SKSEPlugin_Load starting (v{} refactored)", Printscreen::kPluginVersionString);
 
     const auto& unknownKeys = Config::GetUnknownKeys();
     for (const auto& k : unknownKeys) {
@@ -76,12 +77,12 @@ bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
             });
     }
 
-    logger::info("Printscreen v4.0 loaded successfully");
+    logger::info("Printscreen v{} loaded successfully", Printscreen::kPluginVersionString);
     return true;
 }
 
 SKSEPluginInfo(
-    .Version = kPluginVersion,
+    .Version = Printscreen::kPluginVersion,
     .Name = "Printscreen",
     .Author = "William G Lea",
     .StructCompatibility = SKSE::StructCompatibility::Independent,

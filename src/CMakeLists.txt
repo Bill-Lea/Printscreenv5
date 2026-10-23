@@ -98,6 +98,24 @@ file(GLOB_RECURSE PRINTSCREEN_HEADERS
 # set(RESOURCES "${CMAKE_CURRENT_LIST_DIR}/version.rc") # optional
 
 # -------------------------
+# Generated version files (single source: project VERSION above)
+# -------------------------
+set(PRINTSCREEN_VERSION "${CMAKE_PROJECT_VERSION}")
+string(REPLACE "." ";" _PV_LIST "${PRINTSCREEN_VERSION}")
+list(GET _PV_LIST 0 PV_MAJOR)
+list(GET _PV_LIST 1 PV_MINOR)
+list(GET _PV_LIST 2 PV_PATCH)
+if(NOT PV_PATCH)
+  set(PV_PATCH 0)
+endif()
+
+set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+configure_file("${CMAKE_CURRENT_LIST_DIR}/VersionInfo.h.in" "${GEN_DIR}/VersionInfo.h" @ONLY)
+configure_file("${CMAKE_CURRENT_LIST_DIR}/version.rc.in" "${GEN_DIR}/version.rc" @ONLY)
+# Compile the generated version resource into the DLL.
+set(RESOURCES "${GEN_DIR}/version.rc")
+
+# -------------------------
 # Target
 # -------------------------
 add_library(${PLUGIN_TARGET} SHARED
@@ -110,6 +128,7 @@ add_library(${PLUGIN_TARGET} SHARED
 target_include_directories(${PLUGIN_TARGET} PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}"
   "${PROJ_ROOT}"
+  "${GEN_DIR}"
 )
 
 # Prefer a local pch.h at repo root, else use SKSE's PCH

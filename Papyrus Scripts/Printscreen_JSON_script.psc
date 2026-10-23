@@ -1,7 +1,7 @@
 Scriptname Printscreen_JSON_script Hidden
 
 ; Printscreen-native replacement for the subset of PapyrusUtil/JsonUtil used
-; by Printscreen V4.
+; by Printscreen V5.
 ;
 ; Files are stored in:
 ;   Data/SKSE/Plugins/StorageUtilData/
@@ -25,6 +25,10 @@ String Function SetStringValue(String FileName, String KeyName, String Value) Gl
 Int Function GetIntValue(String FileName, String KeyName, Int Missing = 0) Global Native
 Float Function GetFloatValue(String FileName, String KeyName, Float Missing = 0.0) Global Native
 String Function GetStringValue(String FileName, String KeyName, String Missing = "") Global Native
+
+; The DLL's own version string (e.g. "5.0.6"), straight from the plugin.
+; Returns "" when Printscreen.dll is not loaded.
+String Function GetPluginVersion() Global Native
 
 Bool Function HasIntValue(String FileName, String KeyName) Global Native
 Bool Function HasFloatValue(String FileName, String KeyName) Global Native
