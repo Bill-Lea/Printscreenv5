@@ -101,7 +101,7 @@ Things worth knowing about `src/CMakeLists.txt`:
 - Sources are globbed recursively. Anything under `out/`, `files5000/`, `PapyrusInterface_NoMenu_Update/`, or ending in `_patched.cpp` is excluded.
 - Precompiled headers: `src/CMakeLists.txt` looks for a `pch.h` at the repository root, which doesn't exist, so it adds CommonLib's `SKSE/Impl/PCH.h`. The root `CMakeLists.txt` then adds `src/pch.h` as well. Both end up in the PCH list.
 - Windows SDK libraries are linked by absolute path. The SDK version is taken from `WindowsSDKVersion` in the environment, or the newest folder under `Windows Kits\10\Lib`.
-- Neither `version.rc` nor `printscreen.rc` is compiled (the `RESOURCES` line is commented out), so the DLL carries no version resource. Both files are stale anyway (4.0.0 and 5.0.0).
+- The version comes from `project(VERSION ...)` in the root `CMakeLists.txt` only. CMake generates `VersionInfo.h` (`kPluginVersion`, `kPluginVersionString`) and `version.rc` from `src/VersionInfo.h.in` and `src/version.rc.in`; the resource is compiled into the DLL. Papyrus reads it via `Printscreen_Formula_script.GetVersion()`, which `Printscreen_MainQuest_script.RefreshVersion()` stores in the `Version` property on init and every load.
 - A post-build step copies the DLL to `C:/Modding/Mo2/Mods/Printscreen/SKSE/Plugins` (cache variable `MO2_MOD_DIR`). Set it to an empty string if you don't want that.
 
 CommonLibSSE-NG options fixed by the root file: SE on, AE on, VR off, tests off, REX INI/JSON/TOML off, Xbyak off. Patch safety stays at its default (on), which is what pulls hde64 in.

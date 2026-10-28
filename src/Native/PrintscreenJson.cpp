@@ -1,7 +1,6 @@
 #include "PCH.h"
 #include "PrintscreenJson.h"
 
-#include "VersionInfo.h"
 
 #include <nlohmann/json.hpp>
 
@@ -555,15 +554,6 @@ namespace
         return it != entry.data.end() && it->is_string();
     }
 
-    // Returns the DLL's own version string (from the generated VersionInfo.h,
-    // which is produced from the CMake project VERSION). Papyrus callers use
-    // this instead of hardcoding a version; an empty return means the native
-    // implementation is missing/older, which the scripts surface as
-    // "unknown (Printscreen.dll not loaded)".
-    std::string GetPluginVersion(RE::StaticFunctionTag*)
-    {
-        return std::string(Printscreen::kPluginVersionString);
-    }
 }
 
 namespace PrintscreenJson
@@ -603,8 +593,6 @@ namespace PrintscreenJson
         reg("HasIntValue",    HasIntValue);
         reg("HasFloatValue",  HasFloatValue);
         reg("HasStringValue", HasStringValue);
-
-        reg("GetPluginVersion", GetPluginVersion);
 
         logger::info("Printscreen JSON Papyrus functions registered: {}", ok ? "OK" : "WITH ERRORS");
         return ok;

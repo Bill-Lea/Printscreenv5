@@ -26,10 +26,6 @@ Int Function GetIntValue(String FileName, String KeyName, Int Missing = 0) Globa
 Float Function GetFloatValue(String FileName, String KeyName, Float Missing = 0.0) Global Native
 String Function GetStringValue(String FileName, String KeyName, String Missing = "") Global Native
 
-; The DLL's own version string (e.g. "5.0.6"), straight from the plugin.
-; Returns "" when Printscreen.dll is not loaded.
-String Function GetPluginVersion() Global Native
-
 Bool Function HasIntValue(String FileName, String KeyName) Global Native
 Bool Function HasFloatValue(String FileName, String KeyName) Global Native
 Bool Function HasStringValue(String FileName, String KeyName) Global Native

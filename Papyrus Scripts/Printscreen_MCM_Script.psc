@@ -664,7 +664,7 @@ Event OnOptionSliderOpen(int a_option)
         SetSliderOptionValue(a_option, MainQuest.Duration, "{0}", false)
         SetSliderDialogStartValue(MainQuest.Duration)
         SetSliderDialogDefaultValue(5.0)
-        SetSliderDialogRange(1.0, 30.0)
+        SetSliderDialogRange(1.0, 15.0)
         SetSliderDialogInterval(1.0)
 
     elseif (a_option == FPSID)

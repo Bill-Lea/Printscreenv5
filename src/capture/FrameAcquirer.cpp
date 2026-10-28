@@ -121,6 +121,12 @@ HRESULT FrameAcquirer::AcquireFrameGPU(ID3D11Texture2D*& outTexture,
             logger::debug("FrameAcquirer: no frame ready (retry {}/{})", i + 1, kMaxRetries);
             return hr;
         }
+        if (hr == DXGI_ERROR_ACCESS_LOST) {
+            logger::error("FrameAcquirer: DXGI_ERROR_ACCESS_LOST (fullscreen-exclusive switch?) - duplication must be re-initialized");
+            initialized_ = false;
+            outTexture = nullptr;
+            return hr;
+        }
         logger::error("FrameAcquirer::AcquireFrameGPU: AcquireNextFrame failed: 0x{:08X}",
                       static_cast<uint32_t>(hr));
         outTexture = nullptr;

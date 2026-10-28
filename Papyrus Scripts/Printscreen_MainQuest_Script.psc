@@ -10,7 +10,17 @@ Import UI
 ; ==============================================================================
 ; VERSION
 ; ==============================================================================
-String Property Version = "5.06" Auto Hidden
+; Filled from the DLL (Printscreen_Formula_script.GetVersion) by RefreshVersion()
+; on OnInit and on every load, so it always matches the loaded Printscreen.dll.
+; Other scripts read MainQuest.Version instead of calling the native themselves.
+String Property Version = "" Auto Hidden
+
+Function RefreshVersion()
+    Version = Printscreen_Formula_script.GetVersion()
+    if (Version == "")
+        Version = "unknown (Printscreen.dll not loaded)"
+    endif
+EndFunction
 
 ; ==============================================================================
 ; IMAGE CONFIGURATION
@@ -72,6 +82,7 @@ int   _CaptureSeq = 0
 ; INITIALIZATION
 ; ==============================================================================
 Function InitializePrintscreen()
+    RefreshVersion()
     ; TARGETED unregistration only -- do NOT use UnregisterForAllKeys() /
     ; UnregisterForAllModEvents() here. Printscreen_MCM_script (SKI_ConfigBase)
     ; is attached to THIS SAME quest, and the "ForAll" calls act on the whole
@@ -113,6 +124,7 @@ EndEvent
 
 
 Event OnInit()
+    RefreshVersion()
 
     bool allOK = true
     if (SKSE.GetVersion() == 0)
@@ -317,8 +329,8 @@ Function Validate_Fps()
         Fps = 15.0                 ; property default
         return
     endif
-If(FPS == 0 || Fps < 15)
-Fps=10
+If(FPS == 0 || Fps < 1.0)
+Fps=15.0
 Endif
 EndFunction
 
@@ -453,11 +465,9 @@ Function Validate_KeyframeInterval()
         KeyframeInterval = 2.0                 ; property default
         return
     endif
-if(KeyframeInterval< 0.2 || KeyframeInterval <= 10.0)
-return
-else
+if(KeyframeInterval < 0.5 || KeyframeInterval > 10.0)
 KeyframeInterval= 2.0
-endif 
+endif
 EndFunction
 
 Function Validate_EncoderPreference()
@@ -480,7 +490,7 @@ Function Validate_RateControl()
 if(RateControl == 0 || RateControl == 1 || RateControl ==2)
 return
 else
-RateControl=0
+RateControl=1
 Endif
 EndFunction
 
@@ -555,11 +565,11 @@ endFunction
 ; CAPTURE LOGIC
 ; ==============================================================================
 
-Function CaptureImage(String basePath, String imgType, float jpgComp,  String captureMode, float captureDuration)
+Function CaptureImage()
 
-    Debug.Trace("PrintScreen: CaptureImage — type=" + imgType + " mode=" + captureMode)
+    Debug.Trace("PrintScreen: CaptureImage — type=" + ImageType + " mode=" + Mode)
 
-    if (!Printscreen_Formula_script.CheckPath(basePath))
+    if (!Printscreen_Formula_script.CheckPath(Path))
         Debug.Notification("Invalid screenshot path!")
         IsStartingCapture = false
         return
@@ -727,7 +737,7 @@ Event OnKeyUp(int theKey, float holdtime)
     else
         Debug.Notification("Taking screenshot...")
     endif
-    CaptureImage(Path, ImageType, JPG_Compression, Mode, Duration)
+    CaptureImage()
 EndEvent
 
 ; ==============================================================================
@@ -767,7 +777,11 @@ String Function _ExtractMessage(String payload)
         return payload
     endif
     start += StringUtil.GetLength(marker)
-    int stop = StringUtil.Find(payload, "\"", start)
+    int stop = StringUtil.Find(payload, "\",", start)
+    int stop2 = StringUtil.Find(payload, "\"}", start)
+    if (stop < 0 || (stop2 >= 0 && stop2 < stop))
+        stop = stop2
+    endif
     if (stop < start)
         return payload
     endif

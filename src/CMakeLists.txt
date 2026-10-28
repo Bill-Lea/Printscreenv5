@@ -95,8 +95,6 @@ file(GLOB_RECURSE PRINTSCREEN_HEADERS
   "${CMAKE_CURRENT_LIST_DIR}/*.hpp"
 )
 
-# set(RESOURCES "${CMAKE_CURRENT_LIST_DIR}/version.rc") # optional
-
 # -------------------------
 # Generated version files (single source: project VERSION above)
 # -------------------------
@@ -249,10 +247,19 @@ target_link_libraries(${PLUGIN_TARGET} PRIVATE
   ${VERSION_LIB}
   ${WINMM_LIB}
 )
-target_compile_options(Printscreen PRIVATE
-    /UWINVER
-    /U_WIN32_WINNT
-)
+# --- Windows target version ---
+# CommonLibSSE exports WINVER/_WIN32_WINNT=0x0601 (Windows 7) to every consumer.
+# Printscreen needs Windows 10 APIs (Media Foundation, DXGI, WIC), so drop those
+# two entries from CommonLib's *exported* definitions and define 0x0A00 once.
+# CommonLib's own library build is unaffected (only INTERFACE_* is filtered).
+# This replaces the old /UWINVER /U_WIN32_WINNT approach, which also cancelled
+# our own 0x0A00 defines and triggered cl warning D9025.
+get_target_property(_CLIB_IFACE_DEFS CommonLibSSE INTERFACE_COMPILE_DEFINITIONS)
+if(_CLIB_IFACE_DEFS)
+  list(FILTER _CLIB_IFACE_DEFS EXCLUDE REGEX "^(WINVER|_WIN32_WINNT)=")
+  set_target_properties(CommonLibSSE PROPERTIES
+    INTERFACE_COMPILE_DEFINITIONS "${_CLIB_IFACE_DEFS}")
+endif()
 
 target_compile_definitions(Printscreen PRIVATE
     WINVER=0x0A00

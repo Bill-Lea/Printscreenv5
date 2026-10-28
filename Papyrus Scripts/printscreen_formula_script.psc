@@ -30,7 +30,9 @@ String Function Cancel() Global Native
 String Function MYReset(bool force = false) Global Native
 
 ; UI helpers exposed by Bindings.cpp.
-bool Function SaveAndHideAllUI() Global Native
-bool Function RestoreAllUI() Global Native
 bool Function IsGamePaused() Global Native
-;NEED TO ADD FUNCTIONS FOR JSON FILES
+
+; DLL version string from CMake project(VERSION), e.g. "5.0.6".
+; Returns "" if Printscreen.dll is not loaded.
+String Function GetVersion() Global Native
+
